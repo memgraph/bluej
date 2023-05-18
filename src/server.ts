@@ -30,7 +30,7 @@ export class FeedGenerator {
 
   static create(config?: Partial<Config>) {
     const cfg: Config = {
-      port: config?.port ?? 3000,
+      port: config?.port ?? 3001,
       hostname: config?.hostname ?? 'feed-generator.test',
       sqliteLocation: config?.sqliteLocation ?? ':memory:',
       subscriptionEndpoint: config?.subscriptionEndpoint ?? 'wss://bsky.social',
