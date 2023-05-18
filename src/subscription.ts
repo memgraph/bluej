@@ -35,11 +35,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         process.stdout.write('p')
         //process.stdout.write(util.inspect(post, false, null, true))
         try {
-
-          let createdAt = post.record.createdAt
-          let createdAtTrimmed = createdAt.substring(0, createdAt.length - 5)
-          await session.run("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, text: $text, createdAt: localDateTime($createdAt)}) MERGE (person:Person {did: $author}) MERGE (person)-[:AUTHOR_OF]->(post)", { uri: post.uri, cid: post.cid, author: post.author, text: post.record.text, createdAt: createdAtTrimmed })
-
+          await session.run("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, text: $text, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) MERGE (person)-[:AUTHOR_OF]->(post)", { uri: post.uri, cid: post.cid, author: post.author, text: post.record.text, createdAt: post.record.createdAt })
           const replyRoot = post.record?.reply?.root ? post.record.reply.root.uri : null
           const replyParent = post.record?.reply?.parent ? post.record.reply.parent.uri : null
           if (replyRoot) {
