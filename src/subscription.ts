@@ -37,14 +37,14 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         process.stdout.write('p')
         //process.stdout.write(util.inspect(post, false, null, true))
         try {
-          await session.run("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, text: $text, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) MERGE (person)-[:AUTHOR_OF]->(post)", { uri: post.uri, cid: post.cid, author: post.author, text: post.record.text, createdAt: post.record.createdAt })
+          await session.run("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, text: $text, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) MERGE (person)-[:AUTHOR_OF {weight: 0}]->(post)", { uri: post.uri, cid: post.cid, author: post.author, text: post.record.text, createdAt: post.record.createdAt })
           const replyRoot = post.record?.reply?.root ? post.record.reply.root.uri : null
           const replyParent = post.record?.reply?.parent ? post.record.reply.parent.uri : null
           if (replyRoot) {
-            await session.run("MERGE (post1:Post {uri: $uri}) MERGE (post2:Post {uri: $rootUri}) MERGE (post1)-[:ROOT]->(post2)", { uri: post.uri, rootUri: replyRoot })
+            await session.run("MERGE (post1:Post {uri: $uri}) MERGE (post2:Post {uri: $rootUri}) MERGE (post1)-[:ROOT {weight: 0}]->(post2)", { uri: post.uri, rootUri: replyRoot })
           }
           if (replyParent) {
-            await session.run("MERGE (post1:Post {uri: $uri}) MERGE (post2:Post {uri: $parentUri}) MERGE (post1)-[:PARENT]->(post2)", { uri: post.uri, parentUri: replyParent })
+            await session.run("MERGE (post1:Post {uri: $uri}) MERGE (post2:Post {uri: $parentUri}) MERGE (post1)-[:PARENT {weight: 0}]->(post2)", { uri: post.uri, parentUri: replyParent })
           }
         } catch (err) {
           console.error('[ERROR POST CREATE]:', err)
@@ -69,7 +69,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         process.stdout.write('f')
         //process.stdout.write(util.inspect(follow, false, null, true))
         try {
-          await session.run(" MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW]->(p2)", { authorDid: follow.author, subjectDid: follow.record.subject })
+          await session.run(" MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW {weight: 2}]->(p2)", { authorDid: follow.author, subjectDid: follow.record.subject })
         } catch (err) {
           console.error('[ERROR POST FOLLOW]:', err)
         }
@@ -89,7 +89,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         process.stdout.write('l')
         //process.stdout.write(util.inspect(like, false, null, true))
         try {
-          await session.run("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE]->(post)", { authorDid: like.author, postUri: like.record.subject.uri })
+          await session.run("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", { authorDid: like.author, postUri: like.record.subject.uri })
         } catch (err) {
           console.error('[ERROR POST LIKE]:', err)
         }
@@ -114,7 +114,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         process.stdout.write('r')
         //process.stdout.write(util.inspect(repost, false, null, true))
         try {
-          await session.run("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt}) RETURN p", { uri: repost.uri, cid: repost.cid, author: repost.author, repostUri: repost.record.subject.uri, createdAt: repost.record.createdAt })
+          await session.run("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) RETURN p", { uri: repost.uri, cid: repost.cid, author: repost.author, repostUri: repost.record.subject.uri, createdAt: repost.record.createdAt })
         } catch (err) {
           console.error('[ERROR REPOST CREATE]:', err)
         }
