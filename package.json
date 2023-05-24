@@ -8,7 +8,8 @@
   "license": "MIT",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "publishFeed": "ts-node scripts/publishFeedGen.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.3.7",

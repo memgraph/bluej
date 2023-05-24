@@ -15,6 +15,8 @@ async () => {
   await session.run("CREATE INDEX ON :Post", {})
 }
 
+let verbose = false
+
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent) {
     if (!isCommit(evt)) return
@@ -22,7 +24,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     if (ops.posts.deletes.length > 0) {
       for (const post of ops.posts.deletes) {
-        process.stdout.write('P')
+        if (verbose) process.stdout.write('P')
         //process.stdout.write(util.inspect(post, false, null, true))
         try {
           await session.run("MATCH (p:Post {uri: $uri}) DETACH DELETE p", { uri: post.uri })
@@ -34,7 +36,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     if (ops.posts.creates.length > 0) {
       for (const post of ops.posts.creates) {
-        process.stdout.write('p')
+        if (verbose) process.stdout.write('p')
         //process.stdout.write(util.inspect(post, false, null, true))
         try {
           await session.run("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, text: $text, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) MERGE (person)-[:AUTHOR_OF {weight: 0}]->(post)", { uri: post.uri, cid: post.cid, author: post.author, text: post.record.text, createdAt: post.record.createdAt })
@@ -54,7 +56,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     if (ops.follows.deletes.length > 0) {
       for (const follow of ops.follows.deletes) {
-        process.stdout.write('F')
+        if (verbose) process.stdout.write('F')
         //FIXME the record only contains a URI without a source -> dest DID mapping. There is a URI in the at:// uri, but no destination is specificed
         // So not sure yet how to delete the follow relationship in a graph 
         //{
@@ -66,7 +68,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     if (ops.follows.creates.length > 0) {
       for (const follow of ops.follows.creates) {
-        process.stdout.write('f')
+        if (verbose) process.stdout.write('f')
         //process.stdout.write(util.inspect(follow, false, null, true))
         try {
           await session.run(" MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW {weight: 2}]->(p2)", { authorDid: follow.author, subjectDid: follow.record.subject })
@@ -78,7 +80,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     if (ops.likes.deletes.length > 0) {
       for (const like of ops.likes.deletes) {
-        process.stdout.write('L')
+        if (verbose) process.stdout.write('L')
         //FIXME sane situation as with follows.delete, just a URI and not a full source -> dest mapping
         //process.stdout.write(util.inspect(like, false, null, true))
       }
@@ -86,7 +88,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     if (ops.likes.creates.length > 0) {
       for (const like of ops.likes.creates) {
-        process.stdout.write('l')
+        if (verbose) process.stdout.write('l')
         //process.stdout.write(util.inspect(like, false, null, true))
         try {
           await session.run("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", { authorDid: like.author, postUri: like.record.subject.uri })
@@ -99,7 +101,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     if (ops.reposts.deletes.length > 0) {
       for (const repost of ops.reposts.deletes) {
-        process.stdout.write('R')
+        if (verbose) process.stdout.write('R')
         //process.stdout.write(util.inspect(repost, false, null, true))
         try {
           await session.run("MATCH (p:Post {uri: $uri}) DETACH DELETE p", { uri: repost.uri })
@@ -111,7 +113,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     if (ops.reposts.creates.length > 0) {
       for (const repost of ops.reposts.creates) {
-        process.stdout.write('r')
+        if (verbose) process.stdout.write('r')
         //process.stdout.write(util.inspect(repost, false, null, true))
         try {
           await session.run("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) RETURN p", { uri: repost.uri, cid: repost.cid, author: repost.author, repostUri: repost.record.subject.uri, createdAt: repost.record.createdAt })

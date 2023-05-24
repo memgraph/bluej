@@ -17,19 +17,19 @@ const run = async () => {
   // A short name for the record that will show in urls
   // Lowercase with no spaces.
   // Ex: whats-hot
-  const recordName = ''
+  const recordName = 'friends-and-community'
 
   // A display name for your feed
   // Ex: What's Hot
-  const displayName = ''
+  const displayName = 'Friends and Community'
 
   // (Optional) A description of your feed
   // Ex: Top trending content from the whole network
-  const description = ''
+  const description = 'Recent and interesting posts from your follows and community'
 
   // (Optional) The path to an image to be used as your feed's avatar
   // Ex: ~/path/to/avatar.jpeg
-  const avatar: string = ''
+  const avatar: string = './blue-j-icon.png'
 
   // -------------------------------------
   // NO NEED TO TOUCH ANYTHING BELOW HERE
@@ -43,8 +43,9 @@ const run = async () => {
 
   // only update this if in a test environment
   const agent = new AtpAgent({ service: 'https://bsky.social' })
-  await agent.login({ identifier: handle, password })
+  await agent.login({ identifier: <string>process.env.FEEDGEN_HANDLE, password: <string> process.env.FEEDGEN_PASSWORD })
 
+  /*
   try {
     await agent.api.app.bsky.feed.describeFeedGenerator()
   } catch (err) {
@@ -52,6 +53,7 @@ const run = async () => {
       'The bluesky server is not ready to accept published custom feeds yet',
     )
   }
+*/
 
   let avatarRef: BlobRef | undefined
   if (avatar) {
@@ -70,7 +72,7 @@ const run = async () => {
     avatarRef = blobRes.data.blob
   }
 
-  await agent.api.com.atproto.repo.putRecord({
+  await agent.api.com.atproto.repo.createRecord({
     repo: agent.session?.did ?? '',
     collection: ids.AppBskyFeedGenerator,
     rkey: recordName,
