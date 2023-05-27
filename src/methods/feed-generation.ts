@@ -6,7 +6,11 @@ import { validateAuth } from '../auth'
 
 export default function (server: Server, ctx: AppContext) {
   server.app.bsky.feed.getFeedSkeleton(async ({ params, req }) => {
-    const algo = algos[params.feed]
+    let algo = algos[params.feed]
+    if (!algo) {
+      // seems encoded feed can sometimes break things, try this as work around
+      algo = algos[decodeURI(params.feed)]
+    }
     if (!algo) {
       throw new InvalidRequestError(
         'Unsupported algorithm',
