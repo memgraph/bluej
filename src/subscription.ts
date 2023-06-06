@@ -15,7 +15,7 @@ async () => {
   await session.run("CREATE INDEX ON :Post", {})
 }
 
-let verbose = true
+let verbose = false
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent) {

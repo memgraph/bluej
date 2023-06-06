@@ -13,6 +13,7 @@ export interface ParallelQueriesOutput {
     hour_age: number;
     likes: number;
     score: number
+    source: string;
 }
 
 export async function parallelQueries(did: string, max_node_id: number, queryMap: { [key: string]: ParallelQueriesInput }) {
@@ -24,13 +25,13 @@ export async function parallelQueries(did: string, max_node_id: number, queryMap
     const sessions: { [key: string]: any } = {};
     const promises: Promise<QueryResult>[] = [];
     const returnObj: { [key: string]: ParallelQueriesOutput[] } = {};
-    
+
     for (const key in queryMap) {
         sessions[key] = driver.session();
         // fetch query for $key
         let query = queryMap[key].query
         // if there is a cursor it uses the Node.ID property limit results to nodes older then the time the cursor was created so it returns the same result to page on
-        let where_post_node_id = max_node_id > 0 ? query.replace('WHERE_POST_NODE_ID', 'AND ID(post) <= ' + max_node_id.toString()) : query.replace('WHERE_POST_NODE_ID', '')
+        let where_post_node_id = max_node_id > 0 ? 'AND ID(post) <= ' + max_node_id.toString() : ''
         // replace the WHERE_POST_NODE_ID and add the $limit for this query to the end of the string
         query = query.replace('WHERE_POST_NODE_ID', where_post_node_id) + queryMap[key].limit.toString() + ';'
         // And finally create a session for it parsing in the $did for who to run the query for
@@ -47,20 +48,20 @@ export async function parallelQueries(did: string, max_node_id: number, queryMap
             try {
                 if (records[j] !== undefined) {
                     returnObj[key].push({
-                        id: records[j]['_fields'][0].properties.id,
-                        uri: records[j]['_fields'][0].properties.uri,
-                        hour_age: records[j]['_fields'][0].properties.hour_age,
-                        likes: records[j]['_fields'][0].properties.likes,
-                        score: records[j]['_fields'][0].properties.score
+                        id: records[j].get(0).low,
+                        uri: records[j].get(1),
+                        hour_age: records[j].get(2).low,
+                        likes: records[j].get(3).low,
+                        score: records[j].get(4),
+                        source: key
                     })
                 }
             } catch (e) {
-                console.log(key + ' results error')
+                console.error(key + ' results error')
             }
         }
         i++;
     }
-
     for (const key in sessions) {
         await sessions[key].close();
     }
