@@ -4,9 +4,15 @@ import {
 } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
 const neo4j = require('neo4j-driver')
-const util = require('util')
+// const util = require('util')
 const driver = neo4j.driver("bolt://localhost:7687", neo4j.auth.basic("", ""), { encrypted: 'ENCRYPTION_OFF' })
 const session = driver.session()
+const verbose = false
+
+//TODO there's a bunch of transactions errors happening with the new queries + firehose writing:
+// Neo4jError: Cannot resolve conflicting transactions. You can retry this transaction when the conflicting transaction is finished
+// Add failed queries to a retry array using string + object {} and setTimeOut once ever second to retry the queries
+const outputError = false
 
 async () => {
   await session.run("CREATE INDEX ON :Person(did)", {})
@@ -15,7 +21,6 @@ async () => {
   await session.run("CREATE INDEX ON :Post", {})
 }
 
-let verbose = false
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent) {
@@ -29,7 +34,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         try {
           await session.run("MATCH (p:Post {uri: $uri}) DETACH DELETE p", { uri: post.uri })
         } catch (err) {
-          console.error('[ERROR POST DELETE]:', err)
+          if (outputError) console.error('[ERROR POST DELETE]:', err)
         }
       }
     }
@@ -49,7 +54,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             await session.run("MERGE (post1:Post {uri: $uri}) MERGE (post2:Post {uri: $parentUri}) MERGE (post1)-[:PARENT {weight: 0}]->(post2)", { uri: post.uri, parentUri: replyParent })
           }
         } catch (err) {
-          console.error('[ERROR POST CREATE]:', err)
+          if (outputError) console.error('[ERROR POST CREATE]:', err)
         }
       }
     }
@@ -73,7 +78,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         try {
           await session.run(" MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW {weight: 2}]->(p2)", { authorDid: follow.author, subjectDid: follow.record.subject })
         } catch (err) {
-          console.error('[ERROR POST FOLLOW]:', err)
+          if (outputError) console.error('[ERROR POST FOLLOW]:', err)
         }
       }
     }
@@ -93,7 +98,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         try {
           await session.run("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", { authorDid: like.author, postUri: like.record.subject.uri })
         } catch (err) {
-          console.error('[ERROR POST LIKE]:', err)
+          if (outputError) console.error('[ERROR POST LIKE]:', err)
         }
 
       }
@@ -106,7 +111,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         try {
           await session.run("MATCH (p:Post {uri: $uri}) DETACH DELETE p", { uri: repost.uri })
         } catch (err) {
-          console.error('[ERROR REPOST DELETE]:', err)
+          if (outputError) console.error('[ERROR REPOST DELETE]:', err)
         }
       }
     }
@@ -118,7 +123,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         try {
           await session.run("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) RETURN p", { uri: repost.uri, cid: repost.cid, author: repost.author, repostUri: repost.record.subject.uri, createdAt: repost.record.createdAt })
         } catch (err) {
-          console.error('[ERROR REPOST CREATE]:', err)
+          if (outputError) console.error('[ERROR REPOST CREATE]:', err)
         }
       }
     }
