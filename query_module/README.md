@@ -12,7 +12,7 @@ in the query with:
 
 ```
 CALL bluej.hacker_news(likes, hour_age, 4.1) YIELD score
-``
+```
 
 
 
@@ -30,15 +30,15 @@ In the container run:
   apt install -y git cmake gcc g++ vim clang-format
   cd /
   git clone https://github.com/memgraph/mage
-  git submodule update --init --recursive # to get memgraph query module headers
+  git submodule update --init --recursive 
   mkdir -p /mage/cpp/bluej
-  cd /mage/cpp/bluej # copy CMakeLists.txt and bluej.cpp there (both are included here)
+  cd /mage/cpp/bluej 
+  cp CMake and bluej.cpp here
 
-  # append `add_subdirectory(bluej)` to the /mage/cpp/CMakeLists.txt
+  /# append `add_subdirectory(bluej)` to the /mage/cpp/CMakeLists.txt
 
   mkdir -p /mage/cpp/build && cd /mage/cpp/build && cmake -DCMAKE_BUILD_TYPE=Release .. && make bluej
 
-  # here, /mage/cpp/build/bluej.so should exist and should be copied into /usr/lib/memgraph/query_modules
-  # Run this in mgconsole / lab to load the module:
+  /# here, /mage/cpp/build/bluej.so should exist and should be copied into /usr/lib/memgraph/query_modules
+  /# Run this in mgconsole / lab to load the module:
   CALL mg.load_all();
-```
