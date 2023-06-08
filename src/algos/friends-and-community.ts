@@ -3,7 +3,7 @@ import { InvalidRequestError } from '@atproto/xrpc-server'
 import { QueryParams } from '../lexicon/types/app/bsky/feed/getFeedSkeleton'
 import { AppContext } from '../config'
 import { parallelQueries } from './parralel-queries'
-import { weightedRoundRobin, deduplicateArray } from './weighted-round-robin'
+import { weightedRoundRobin, sortByHourAge, deduplicateArray } from './weighted-round-robin'
 import { followQuery, topFollowQuery, likedByFollowQuery, communityQuery } from './queries'
 
 export const uri = 'at://did:plc:ewgejell4547pukut5255ibm/app.bsky.feed.generator/friendcomm'
@@ -35,7 +35,7 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
     try {
         // the number of results defined by limit determines how it will be distributed in the weightedRoundRobin call below
         let queryResults = await parallelQueries(requesterDid, maxNodeId, { 
-            follow: { query: followQuery, limit: 200},
+            follow: { query: followQuery, limit: 300},
             //topFollow: {query: topFollowQuery, limit: 100 },
             likedByFollow: { query: likedByFollowQuery, limit: 100 },
             community: { query: communityQuery, limit: 100 }
@@ -44,10 +44,10 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
         // distribute the posts returned using a weighted round robin algorithm, using the length of the array as the weight
         let results = deduplicateArray(
             weightedRoundRobin(
-                queryResults.follow,
                 // queryResults.topFollow,
+                queryResults.community,
                 queryResults.likedByFollow,
-                queryResults.community
+                queryResults.follow
             )
         )
         
@@ -67,7 +67,7 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
         position += limit
 
         if (maxLength > position + limit + 1) {
-            cursor = encodeURI(maxNodeId + '::' + requesterDid + '::' + position)
+            cursor = encodeURI(maxNodeId + '::' + requesterDid + '::' + (position - 1))
         }
         // The feed format contains an array of post: uri, so map it to just this field
         const feed = results.map((row) => ({

@@ -4,6 +4,12 @@ export type WeightedItem = { items: any[], weight: number };
 
 type Element = ParallelQueriesOutput;
 
+export function sortByHourAge(entries: ParallelQueriesOutput[]): ParallelQueriesOutput[] {
+    const zeroHourAgeEntries = entries.filter((entry) => entry.hour_age === 0);
+    const nonZeroHourAgeEntries = entries.filter((entry) => entry.hour_age !== 0);
+    return [...zeroHourAgeEntries, ...nonZeroHourAgeEntries];
+}
+
 export function deduplicateArray(arr: ParallelQueriesOutput[]): ParallelQueriesOutput[] {
     const idSet = new Set<number>();
     return arr.filter((obj) => {
