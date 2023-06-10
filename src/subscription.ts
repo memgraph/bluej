@@ -133,9 +133,10 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
   }
 
   async processQueryQueue(): Promise<void> {
-    while (this.queryQueue.length > 0) {
+    const queueLength = this.queryQueue.length;
+    for (let i = 0; i < queueLength; i++) {
       const { query, params, retryCount } = this.queryQueue.shift()!;
-      await this.executeQuery(query, params, retryCount);
+      this.executeQuery(query, params, retryCount);
     }
   }
 
