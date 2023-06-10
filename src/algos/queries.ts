@@ -3,7 +3,7 @@
 export const followQuery =
     'MATCH (my_person:Person {did: $did})-[:FOLLOW]->(follow_person:Person) ' +
     'MATCH(follow_person) - [: AUTHOR_OF] -> (post:Post) ' +
-    'WHERE post.indexedAt IS NOT NULL WHERE_POST_NODE_ID ' +
+    'WHERE post.indexedAt IS NOT NULL  AND NOT exists((post) - [:ROOT] -> (:Post {uri:\'at://did:plc:wgaezxqi2spqm3mhrb5xvkzi/app.bsky.feed.post/3juzlwllznd24\'})) WHERE_POST_NODE_ID ' +
     'WITH localDateTime() - post.indexedAt as duration, post ' +
     'WHERE duration.day < 5 ' +
     'WITH(duration.day * 24) + duration.hour as hour_age, post ' +
