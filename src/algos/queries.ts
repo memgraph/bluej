@@ -60,3 +60,4 @@ export const communityQuery =
     'RETURN ID(post), post.uri, hour_age, likes, score ' +
     'ORDER BY score DESC, hour_age ASC, post.indexedAt DESC ' +
     'LIMIT '
+

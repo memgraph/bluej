@@ -3,7 +3,7 @@ import { InvalidRequestError } from '@atproto/xrpc-server'
 import { QueryParams } from '../lexicon/types/app/bsky/feed/getFeedSkeleton'
 import { AppContext } from '../config'
 import { parallelQueries } from './parralel-queries'
-import { weightedRoundRobin, sortByHourAge, deduplicateArray } from './weighted-round-robin'
+import { weightedRoundRobin, deduplicateArray } from './weighted-round-robin'
 import { followQuery, likedByFollowQuery, communityQuery } from './queries'
 
 export const uri = 'at://did:plc:ewgejell4547pukut5255ibm/app.bsky.feed.generator/friendcomm'
@@ -49,7 +49,7 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
         position = position < 600 ? position : 600
         limit = limit < 600 ? limit : 600
 
-        console.log('[', requesterDid, '] l:', limit, 'p:', position, 'c:', cursor)
+        console.log('[home-plus] [', requesterDid, '] l:', limit, 'p:', position, 'c:', cursor)
 
         // the number of results defined by limit determines how it will be distributed in the weightedRoundRobin call below
         let queryResults = await parallelQueries(requesterDid, maxNodeId, {
