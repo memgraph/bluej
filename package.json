@@ -24,11 +24,7 @@
     "express": "^4.18.2",
     "kysely": "^0.22.0",
     "multiformats": "^9.9.0",
-<<<<<<< HEAD
     "neo4j-driver": "^5.10.0"
-=======
-    "neo4j-driver": "^5.9.1"
->>>>>>> 70743a737c13a830bb58600972b81bcedfbf2881
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.4",
