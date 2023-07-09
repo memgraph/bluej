@@ -10,9 +10,9 @@ import * as Authors from './authors'
 type AlgoHandler = (ctx: AppContext, params: QueryParams, requesterDid: string) => Promise<AlgoOutput>
 
 const algos: Record<string, AlgoHandler> = {
-  [FriendsAndCommunity.uri]: FriendsAndCommunity.handler,
-  [HomePlus.uri]: HomePlus.handler,
-  [Authors.uri]: Authors.handler,
+  [FriendsAndCommunity.shortname]: FriendsAndCommunity.handler,
+  [HomePlus.shortname]: HomePlus.handler,
+  [Authors.shortname]: Authors.handler,
 }
 
 export default algos

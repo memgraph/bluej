@@ -9,9 +9,7 @@ export const validateAuth = async (
 ): Promise<string> => {
   const { authorization = '' } = req.headers
   if (!authorization.startsWith('Bearer ')) {
-    // temp hack so we can test locally
-    return 'did:plc:ewgejell4547pukut5255ibm'
-    //throw new AuthRequiredError()
+    throw new AuthRequiredError()
   }
   const jwt = authorization.replace('Bearer ', '').trim()
   return verifyJwt(jwt, serviceDid, async (did: string) => {

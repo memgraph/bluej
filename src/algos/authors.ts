@@ -10,7 +10,7 @@ export const uri = 'at://did:plc:2wqomm3tjqbgktbrfwgvrw34/app.bsky.feed.generato
 
 const authorQuery =
     'MATCH (post:Post) ' +
-    'WHERE post.text CONTAINS "#author" OR post.text CONTAINS "📚"' +
+    'WHERE post.text CONTAINS "#author"' +
     'RETURN ID(post), post.uri, 1 as hour_age, 2 as likes, 3 as score ' +
     'ORDER BY post.indexedAt DESC ' +
     'LIMIT 300'

@@ -6,7 +6,7 @@ import { parallelQueries } from './parralel-queries'
 import { weightedRoundRobin, deduplicateArray } from './weighted-round-robin'
 import { followQuery, likedByFollowQuery, communityQuery } from './queries'
 
-export const uri = 'at://did:plc:2wqomm3tjqbgktbrfwgvrw34/app.bsky.feed.generator/home-plus'
+export const shortname = 'home-plus'
 
 interface LastSeen {
     maxNodeId: number;
@@ -26,6 +26,12 @@ setInterval(() => {
 // This is the main handler for the feed generator
 export const handler = async (ctx: AppContext, params: QueryParams, requesterDid: string) => {
     try {
+
+        if (requesterDid.length === 0) {
+            console.log('[ERROR] requesterDid is empty, using default')
+            requesterDid = 'did:plc:ewgejell4547pukut5255ibm5'
+        }
+
         let limit = params.limit ? params.limit : 50
         let cursor = params.cursor ? params.cursor : undefined
 

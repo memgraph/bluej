@@ -6,7 +6,7 @@ import { parallelQueries } from './parralel-queries'
 import { weightedRoundRobin, deduplicateArray } from './weighted-round-robin'
 import { followQuery, likedByFollowQuery, communityQuery } from './queries'
 
-export const uri = 'at://did:plc:ewgejell4547pukut5255ibm/app.bsky.feed.generator/friendcomm'
+export const shortname = 'friendcomm'
 
 interface LastSeen {
     maxNodeId: number;
