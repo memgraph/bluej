@@ -6,7 +6,7 @@ import { parallelQueries } from './parralel-queries'
 import { deduplicateArray } from './weighted-round-robin'
 import { ParallelQueriesOutput } from './parralel-queries'
 
-export const uri = 'at://did:plc:2wqomm3tjqbgktbrfwgvrw34/app.bsky.feed.generator/authors'
+export const shortname = 'authors'
 
 const authorQuery =
     'MATCH (post:Post) ' +
