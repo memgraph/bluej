@@ -14,6 +14,18 @@ docker run -it -p 7687:7687 -p 7444:7444 -p 3000:3000 memgraph/memgraph-platform
 
 Or follow the instructions for your platform on https://memgraph.com/docs/memgraph/installation
 
+## Indexes
+
+Indexes are critical for performance, for each event that comes in the database needs to match user id's and post id's, and without indexes those take a looonnggg time (for a computer anyway), so once you have memgraph running, create indexes using this query:
+```
+CREATE INDEX ON :Person(did)
+CREATE INDEX ON :Post(uri)
+CREATE INDEX ON :Person
+CREATE INDEX ON :Post
+```
+
+## Running
+
 Once done, follow these steps to run:
 
 1) `git clone https://github.com/memgraph/bluej.git`
