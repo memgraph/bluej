@@ -16,6 +16,8 @@ function App({socket}) {
 
     const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
 
+    const max_nodes = 250;
+
     const nodeGroupNames = {
         1: 'Post',
         2: 'Repost',
@@ -71,7 +73,7 @@ function App({socket}) {
 
         fgRef.current.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 2000);
 
-        if (Object.keys(nodes).length < 250) {
+        if (Object.keys(nodes).length < max_nodes) {
             return;
         }
 
@@ -112,7 +114,7 @@ function App({socket}) {
     };
 
     const handleNodeHover = node => {
-        if (Object.keys(nodes).length < 250) {
+        if (Object.keys(nodes).length < max_nodes) {
             return;
         }
 
@@ -142,7 +144,7 @@ function App({socket}) {
     };
 
     const handleLinkHover = link => {
-        if (Object.keys(nodes).length < 250) {
+        if (Object.keys(nodes).length < max_nodes) {
             return;
         }
 
@@ -192,7 +194,7 @@ function App({socket}) {
         }
 
         const onCreate = msg => {
-            if (Object.keys(nodes).length >= 250) {
+            if (Object.keys(nodes).length >= max_nodes) {
                 return;
             }
 
@@ -236,7 +238,7 @@ function App({socket}) {
                 let rootExists = nodes[msg.rootUri] !== undefined;
                 let nodeExists = nodes[msg.uri] !== undefined;
 
-                if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= 250) {
+                if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= max_nodes) {
                     return;
                 }
 
@@ -259,7 +261,7 @@ function App({socket}) {
                 let parentExists = nodes[msg.parentUri] !== undefined;
                 let nodeExists = nodes[msg.uri] !== undefined;
 
-                if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= 250) {
+                if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= max_nodes) {
                     return;
                 }
 
@@ -282,7 +284,7 @@ function App({socket}) {
                 let p1Exists = nodes[msg.authorDid] !== undefined;
                 let p2Exists = nodes[msg.subjectDid] !== undefined;
 
-                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= 250) {
+                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= max_nodes) {
                     return;
                 }
 
@@ -314,7 +316,7 @@ function App({socket}) {
                 let personExists = nodes[msg.authorDid] !== undefined;
                 let postExists = nodes[msg.postUri] !== undefined;
                 
-                if ((!personExists || !postExists) && Object.keys(nodes).length >= 250) {
+                if ((!personExists || !postExists) && Object.keys(nodes).length >= max_nodes) {
                     return;
                 }
 
@@ -371,12 +373,12 @@ function App({socket}) {
                 </div>
                 {
                     selectedNode.id.startsWith('did') ? 
-                        <div> Node type: user <br/> ID: {selectedNode.id} </div> : 
+                        <div> Node type: Person <br/> ID: {selectedNode.id} </div> : 
                     selectedNode.text ? 
-                        <div> Node type: post <br/> ID: {selectedNode.id} <br/> Text: {selectedNode.text} </div> :
+                        <div> Node type: Post <br/> ID: {selectedNode.id} <br/> Text: {selectedNode.text} </div> :
                     selectedNode.repostUri ? 
-                        <div> Node type: repost <br/> ID: {selectedNode.id} </div> : 
-                    <div> Node type: post <br/> ID: {selectedNode.id} </div>
+                        <div> Node type: Repost <br/> ID: {selectedNode.id} </div> : 
+                    <div> Node type: Post <br/> ID: {selectedNode.id} </div>
                 }
             </div>}
             <div className='legend'>
@@ -403,6 +405,7 @@ function App({socket}) {
                 width={windowSize[0]}
                 height={windowSize[1]}
 
+                nodeLabel={node => nodeGroupNames[node.group]}
                 nodeRelSize={10}
                 nodeColor={node => {
                     if (hoverNode === node || selectedNode === node) {

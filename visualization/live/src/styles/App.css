@@ -6,6 +6,8 @@
     padding: 10px;
     display: flex;
     flex-direction: column;
+    max-width: 600px;
+    overflow-wrap: break-word;
 }
 
 .infoTitle {
@@ -55,7 +57,7 @@
     display: flex;
     flex-direction: column;
     background-color: #E0E0E0;
-    border: 2px solid black;
+    /* border: 2px solid black; */
     padding: 5px;
     border-radius: 5px;
     font-size: 17.5px;
