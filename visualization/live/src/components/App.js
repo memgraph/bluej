@@ -5,20 +5,31 @@ import '../styles/App.css';
 function App({socket}) {
     const [nodes, setNodes] = useState({});
     const [links, setLinks] = useState({});
-    // const [activeLinks, setActiveLinks] = useState({});
 
+    const [hoverNode, setHoverNode] = useState(null);
     const [highlightNodes, setHighlightNodes] = useState(new Set());
     const [highlightLinks, setHighlightLinks] = useState(new Set());
-    const [hoverNode, setHoverNode] = useState(null);
 
-    const [selectedNode, setSelectedNode] = useState(null)
-    const mousePos = {};
+    const [selectedNode, setSelectedNode] = useState(null);
+    const [selectedNodes, setSelectedNodes] = useState(new Set());
+    const [selectedLinks, setSelectedLinks] = useState(new Set());
+
     const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
+
+    const nodeGroupNames = {
+        1: 'Post',
+        2: 'Repost',
+        3: 'Person',
+        4: 'Highlighted/Selected',
+        5: 'Neighbouring Node'
+    }
 
     const nodeColorScheme = {
         1: '#FFC516',
         2: '#E30024',
-        3: '#6E0097'
+        3: '#6E0097',
+        4: '#4ed5ed',
+        5: '#a5ed4e'
     };
 
     const linkColorScheme = {
@@ -30,38 +41,64 @@ function App({socket}) {
     };
 
     useEffect(() => {
-        const handleMouseClick = (event) => {
-            mousePos.x = event.clientX;
-            mousePos.y = event.clientY;
-        };
-
         const handleWindowResize = () => {
             setWindowSize([window.innerWidth, window.innerHeight]);
         };
       
         window.addEventListener('resize', handleWindowResize);
-        window.addEventListener("click", handleMouseClick);
     
         return () => {
-            window.removeEventListener("click", handleMouseClick);
             window.removeEventListener('resize', handleWindowResize);
         };
     }, []);
 
     const fgRef = useRef();
 
-    const handleClick = useCallback(node => {
-        setSelectedNode(null);
+    const updateSelected = useCallback(() => {
+        setSelectedNodes(selectedNodes);
+        setSelectedLinks(selectedLinks);
 
+        setNodes(previous => {
+            return {
+                ...previous
+            };
+        });
+    }, [selectedNodes, selectedLinks]);
+
+    const handleClick = useCallback(node => {
         const distance = 500;
         const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
 
         fgRef.current.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 2000);
 
+        if (Object.keys(nodes).length < 250) {
+            return;
+        }
+
+        setSelectedNode(null);
+        selectedNodes.clear();
+        selectedLinks.clear();
+        updateSelected();
+
         setTimeout(() => {
-            setSelectedNode(node)
-        }, 2100);
-    }, [fgRef]);
+            Object.keys(links).forEach(key => {
+                let split_relationship = key.split(' ');
+                let first_node = split_relationship[0];
+                let second_node = split_relationship[2];
+                
+                if (first_node.startsWith(node.id) || second_node.startsWith(node.id)) {
+                    let link = links[key];
+
+                    selectedLinks.add(link);
+                    selectedNodes.add(link.source);
+                    selectedNodes.add(link.target);
+                }
+            });
+
+            setSelectedNode(node);
+            updateSelected();
+        }, 2000);
+    }, [fgRef, nodes, links, selectedNodes, selectedLinks, updateSelected]);
 
     const updateHighlight = () => {
         setHighlightNodes(highlightNodes);
@@ -86,7 +123,7 @@ function App({socket}) {
             highlightNodes.add(node);
 
             Object.keys(links).forEach(key => {
-                let split_relationship = key.split(" ");
+                let split_relationship = key.split(' ');
                 let first_node = split_relationship[0];
                 let second_node = split_relationship[2];
                 
@@ -138,7 +175,7 @@ function App({socket}) {
                 setLinks(previous => {
                     let cpy = {...previous};
                     Object.keys(previous).forEach(key => {
-                        let split_relationship = key.split(" ");
+                        let split_relationship = key.split(' ');
                         let first_node = split_relationship[0];
                         let second_node = split_relationship[2];
                         
@@ -187,7 +224,7 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.uri + " isRepostOf " + msg.repostUri]: {
+                    [msg.uri + ' isRepostOf ' + msg.repostUri]: {
                         source: msg.uri, target: msg.repostUri, value: 'is a repost of'
                     }
                 }));
@@ -214,21 +251,10 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.uri + " hasRoot " + msg.rootUri]: {
+                    [msg.uri + ' hasRoot ' + msg.rootUri]: {
                         source: msg.uri, target: msg.rootUri, value: 'has root'
                     }
                 }));
-
-                // setActiveLinks(previous => ({
-                //     ...previous,
-                //     [msg.uri + " hasRoot " + msg.rootUri]: true
-                // }))
-                // setTimeout(() => {
-                //     setActiveLinks(previous => ({
-                //       ...previous,
-                //       [msg.uri + " hasRoot " + msg.rootUri]: false
-                //     }));
-                // }, 5000);
             } else if (msg.type === 'parent') {
                 let parentExists = nodes[msg.parentUri] !== undefined;
                 let nodeExists = nodes[msg.uri] !== undefined;
@@ -248,21 +274,10 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.uri + " hasParent " + msg.parentUri]: {
+                    [msg.uri + ' hasParent ' + msg.parentUri]: {
                         source: msg.uri, target: msg.parentUri, value: 'has parent'
                     }
                 }));
-
-                // setActiveLinks(previous => ({
-                //     ...previous,
-                //     [msg.uri + " hasParent " + msg.parentUri]: true
-                // }))
-                // setTimeout(() => {
-                //     setActiveLinks(previous => ({
-                //       ...previous,
-                //       [msg.uri + " hasParent " + msg.parentUri]: false
-                //     }));
-                // }, 5000);
             } else if (msg.type === 'follow') {
                 let p1Exists = nodes[msg.authorDid] !== undefined;
                 let p2Exists = nodes[msg.subjectDid] !== undefined;
@@ -291,21 +306,10 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.authorDid + " followed " + msg.subjectDid]: {
+                    [msg.authorDid + ' followed ' + msg.subjectDid]: {
                         source: msg.authorDid, target: msg.subjectDid, value: 'followed'
                     }
                 }));
-
-                // setActiveLinks(previous => ({
-                //     ...previous,
-                //     [msg.authorDid + " followed " + msg.subjectDid]: true
-                // }))
-                // setTimeout(() => {
-                //     setActiveLinks(previous => ({
-                //       ...previous,
-                //       [msg.authorDid + " followed " + msg.subjectDid]: false
-                //     }));
-                // }, 5000);
             } else if (msg.type === 'like') {
                 let personExists = nodes[msg.authorDid] !== undefined;
                 let postExists = nodes[msg.postUri] !== undefined;
@@ -334,21 +338,10 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.authorDid + " liked " + msg.postUri]: {
+                    [msg.authorDid + ' liked ' + msg.postUri]: {
                         source: msg.authorDid, target: msg.postUri, value: 'liked'
                     }
                 }));
-
-                // setActiveLinks(previous => ({
-                //     ...previous,
-                //     [msg.authorDid + " liked " + msg.postUri]: true
-                // }))
-                // setTimeout(() => {
-                //     setActiveLinks(previous => ({
-                //       ...previous,
-                //       [msg.authorDid + " liked " + msg.postUri]: false
-                //     }));
-                // }, 5000);
             }
         }
 
@@ -365,7 +358,41 @@ function App({socket}) {
 
     return (
         <>
-            {selectedNode && <div style={{position: "absolute", left: `${mousePos.x}px`, top: `${mousePos.y}px`}}>Selected Node with ID {selectedNode.id}</div>}
+            {selectedNode && 
+            <div className='nodeInfo' style={{position: 'absolute', left: `${windowSize[0] / 2 + 50}px`, top: `${windowSize[1] / 2 - 50}px`}}>
+                <div className='infoTitle'>
+                    Info 
+                    <div className='exit' onClick={() => {
+                        setSelectedNode(null);
+                        selectedNodes.clear();
+                        selectedLinks.clear();
+                        updateSelected();
+                    }}/>
+                </div>
+                {
+                    selectedNode.id.startsWith('did') ? 
+                        <div> Node type: user <br/> ID: {selectedNode.id} </div> : 
+                    selectedNode.text ? 
+                        <div> Node type: post <br/> ID: {selectedNode.id} <br/> Text: {selectedNode.text} </div> :
+                    selectedNode.repostUri ? 
+                        <div> Node type: repost <br/> ID: {selectedNode.id} </div> : 
+                    <div> Node type: post <br/> ID: {selectedNode.id} </div>
+                }
+            </div>}
+            <div className='legend'>
+                Node types
+                <hr className='legendSeparator'/>
+                {Object.keys(nodeColorScheme).map(key => {
+                    return (
+                        <div className='legendItem'>
+                            <div className='legendColor' style={{backgroundColor: nodeColorScheme[key]}}/>
+                            <div>
+                                {nodeGroupNames[key]}
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
             <ForceGraph3D
                 graphData={{nodes:Object.values(nodes), links:Object.values(links)}}
 
@@ -376,39 +403,27 @@ function App({socket}) {
                 width={windowSize[0]}
                 height={windowSize[1]}
 
-                // nodeLabel={node => {
-                //     if (node.id.startsWith("did")) {
-                //         return "User with ID: " + node.id
-                //     } else if (node.text) {
-                //         return "Post with ID: " + node.id + " and text: " + node.text
-                //     } else if (node.repostUri) {
-                //         return "Repost with ID: " + node.id
-                //     } else {
-                //         return "Post with ID: " + node.id
-                //     }
-                // }}
                 nodeRelSize={10}
                 nodeColor={node => {
-                    if (hoverNode === node) {
-                        return "#4ed5ed"
+                    if (hoverNode === node || selectedNode === node) {
+                        return nodeColorScheme[4]
                     }
-                    if (highlightNodes.has(node)) {
-                        return "#a5ed4e"
-                    } else {
-                        return nodeColorScheme[node.group]
+                    if (highlightNodes.has(node) || selectedNodes.has(node)) {
+                        return nodeColorScheme[5]
                     }
+                    return nodeColorScheme[node.group]
                 }}
                 nodeOpacity={1}
 
-                linkLabel="value"
-                linkWidth={link => highlightLinks.has(link) ? 5 : 1}
+                linkLabel='value'
+                linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
                 linkCurvature={0.25}
                 linkColor={link => linkColorScheme[link.value]}
 
-                linkDirectionalArrowLength={link => highlightLinks.has(link) ? 7.5 : 2.5}
+                linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
                 linkDirectionalArrowRelPos={0.5}
 
-                linkDirectionalParticles={link => highlightLinks.has(link) ? 1 : 0}
+                linkDirectionalParticles={link => highlightLinks.has(link) || selectedLinks.has(link) ? 1 : 0}
                 linkDirectionalParticleWidth={5}
                 linkDirectionalParticleSpeed={0.025}
 
@@ -417,7 +432,7 @@ function App({socket}) {
                 onLinkHover={handleLinkHover}
 
                 forceEngine='d3'
-                d3AlphaDecay={highlightLinks.size || highlightNodes.size ? 1 : 0}
+                d3AlphaDecay={highlightLinks.size || highlightNodes.size || selectedNode ? 1 : 0}
                 d3VelocityDecay={0.75}
             />
         </>

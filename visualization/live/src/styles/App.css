@@ -1,0 +1,83 @@
+.nodeInfo {
+    background-color: #E0E0E0;
+    color: black;
+    z-index: 1;
+    border-radius: 5px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.infoTitle {
+    display: flex;
+    font-weight: bold;
+    font-size: 17.5px;
+}
+
+.exit {
+    box-sizing: border-box;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    cursor: pointer;
+    display: block;
+    transform: scale(var(--ggs,1));
+    width: 22px;
+    height: 22px;
+    border: 2px solid transparent;
+    border-radius: 40px
+}
+
+.exit::after,
+.exit::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    transform: rotate(45deg);
+    border-radius: 5px;
+    top: 8px;
+    left: 1px
+}
+
+.exit::after {
+    transform: rotate(-45deg)
+}
+
+.legend {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #E0E0E0;
+    border: 2px solid black;
+    padding: 5px;
+    border-radius: 5px;
+    font-size: 17.5px;
+}
+
+.legendSeparator {
+    background-color: black;
+    width: 100%;
+    margin: 0px;
+    height: 0.5px;
+}
+
+.legendItem {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.legendColor {
+    width: 7.5px;
+    height: 7.5px;
+    border: 1px solid black;
+    margin-right: 5px;
+    margin-left: 2.5px;
+}
