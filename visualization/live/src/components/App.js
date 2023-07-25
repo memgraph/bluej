@@ -217,13 +217,20 @@ function App({socket}) {
         setFilteredNodes(tempFilteredNodes);
         setFilteredLinks(tempFilteredLinks);
         setFilterActive(true);
+
+        return tempFilteredNodes;
     }
 
-    const handleFilterSubmit = (e) => {
+    const handleFilterSubmit = useCallback((e) => {
         e.preventDefault();
         clearSelected();
-        filterBFS(filterString, nodes, links, 2);
-    }
+        let tempFilteredNodes = filterBFS(filterString, nodes, links, 2);
+
+        if (Object.keys(tempFilteredNodes).length > 0) {
+            let node = tempFilteredNodes[Object.keys(tempFilteredNodes)[0]];
+            handleClick(node);
+        }
+    }, [nodes, links, filterString, clearSelected, handleClick]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -429,11 +436,14 @@ function App({socket}) {
                 <FontAwesomeIcon className='searchIcon' icon={faMagnifyingGlass}/>
                 <input className='searchbar' type='text' value={filterString} onChange={(e) => setFilterString(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleFilterSubmit(e)} placeholder='Search using ID...'/>
                 <button className='searchClearButton' onClick={(e) => {
-                    if (filterActive) {
+                    e.preventDefault();
+                    if (filterString) {
                         setFilterString('');
+                    }
+                    if (filterActive) {
+                        setFilterActive(false);
                         setFilteredNodes({});
                         setFilteredLinks({});
-                        setFilterActive(false);
                         clearSelected();
                     }
                 }}>
