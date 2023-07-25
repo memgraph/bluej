@@ -18,13 +18,19 @@
     "@atproto/repo": "^0.1.0",
     "@atproto/uri": "^0.0.2",
     "@atproto/xrpc-server": "^0.2.0",
+    "@fortawesome/fontawesome-free": "^6.4.0",
+    "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-regular-svg-icons": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
+    "@fortawesome/react-fontawesome": "^0.2.0",
     "better-sqlite3": "^8.3.0",
     "dotenv": "^16.0.3",
     "es6-promise-pool": "^2.5.0",
     "express": "^4.18.2",
     "kysely": "^0.22.0",
     "multiformats": "^9.9.0",
-    "neo4j-driver": "^5.10.0"
+    "neo4j-driver": "^5.10.0",
+    "react-tooltip": "^5.18.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.4",

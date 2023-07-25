@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 
 function App({socket}) {
     const [nodes, setNodes] = useState({});
@@ -16,7 +18,12 @@ function App({socket}) {
 
     const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
 
-    const max_nodes = 250;
+    const [filterString, setFilterString] = useState('');
+    const [filteredNodes, setFilteredNodes] = useState({});
+    const [filteredLinks, setFilteredLinks] = useState({});
+    const [filterActive, setFilterActive] = useState(false);
+
+    const maxNodes = 250;
 
     const nodeGroupNames = {
         1: 'Post',
@@ -67,28 +74,32 @@ function App({socket}) {
         });
     }, [selectedNodes, selectedLinks]);
 
+    const clearSelected = useCallback(() => {
+        setSelectedNode(null);
+        selectedNodes.clear();
+        selectedLinks.clear();
+        updateSelected();
+    }, [selectedNodes, selectedLinks, updateSelected]);
+
     const handleClick = useCallback(node => {
         const distance = 500;
         const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
 
         fgRef.current.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 2000);
 
-        if (Object.keys(nodes).length < max_nodes) {
+        if (Object.keys(nodes).length < maxNodes) {
             return;
         }
 
-        setSelectedNode(null);
-        selectedNodes.clear();
-        selectedLinks.clear();
-        updateSelected();
+        clearSelected();
 
         setTimeout(() => {
             Object.keys(links).forEach(key => {
-                let split_relationship = key.split(' ');
-                let first_node = split_relationship[0];
-                let second_node = split_relationship[2];
+                let splitRelationship = key.split(' ');
+                let firstNode = splitRelationship[0];
+                let secondNode = splitRelationship[2];
                 
-                if (first_node.startsWith(node.id) || second_node.startsWith(node.id)) {
+                if (firstNode.startsWith(node.id) || secondNode.startsWith(node.id)) {
                     let link = links[key];
 
                     selectedLinks.add(link);
@@ -100,7 +111,7 @@ function App({socket}) {
             setSelectedNode(node);
             updateSelected();
         }, 2000);
-    }, [fgRef, nodes, links, selectedNodes, selectedLinks, updateSelected]);
+    }, [fgRef, nodes, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
 
     const updateHighlight = () => {
         setHighlightNodes(highlightNodes);
@@ -114,7 +125,7 @@ function App({socket}) {
     };
 
     const handleNodeHover = node => {
-        if (Object.keys(nodes).length < max_nodes) {
+        if (Object.keys(nodes).length < maxNodes) {
             return;
         }
 
@@ -125,11 +136,11 @@ function App({socket}) {
             highlightNodes.add(node);
 
             Object.keys(links).forEach(key => {
-                let split_relationship = key.split(' ');
-                let first_node = split_relationship[0];
-                let second_node = split_relationship[2];
+                let splitRelationship = key.split(' ');
+                let firstNode = splitRelationship[0];
+                let secondNode = splitRelationship[2];
                 
-                if (first_node.startsWith(node.id) || second_node.startsWith(node.id)) {
+                if (firstNode.startsWith(node.id) || secondNode.startsWith(node.id)) {
                     let link = links[key];
 
                     highlightLinks.add(link);
@@ -144,7 +155,7 @@ function App({socket}) {
     };
 
     const handleLinkHover = link => {
-        if (Object.keys(nodes).length < max_nodes) {
+        if (Object.keys(nodes).length < maxNodes) {
             return;
         }
 
@@ -159,6 +170,60 @@ function App({socket}) {
 
         updateHighlight();
     };
+
+    const filterBFS = (filterStr, currNodes, currLinks, depth) => {
+        if (!filterStr) {
+            return;
+        }
+
+        let tempFilteredNodes = {};
+        let tempFilteredLinks = {};
+
+        let currQueue = [];
+
+        Object.values(currNodes).forEach(node => {
+            if (node.id.startsWith(filterStr)) {
+                tempFilteredNodes[node.id] = node;
+                currQueue.push(node);
+            }
+        });
+
+        for (let i = 0; i < depth; i++) {
+            let tempQueue = [];
+
+            currQueue.forEach(node => {                  
+                Object.keys(currLinks).forEach(key => {
+                    let splitRelationship = key.split(' ');
+                    let firstNode = splitRelationship[0];
+                    let secondNode = splitRelationship[2];
+
+                    if (firstNode.startsWith(node.id)) {
+                        tempFilteredNodes[secondNode] = currNodes[secondNode];
+                        tempQueue.push(currNodes[secondNode]);
+                    } else if (secondNode.startsWith(node.id)) {
+                        tempFilteredNodes[firstNode] = currNodes[firstNode];
+                        tempQueue.push(currNodes[firstNode]);
+                    } else {
+                        return;
+                    }
+
+                    tempFilteredLinks[key] = currLinks[key];
+                })
+            });
+
+            currQueue = tempQueue;
+        }
+
+        setFilteredNodes(tempFilteredNodes);
+        setFilteredLinks(tempFilteredLinks);
+        setFilterActive(true);
+    }
+
+    const handleFilterSubmit = (e) => {
+        e.preventDefault();
+        clearSelected();
+        filterBFS(filterString, nodes, links, 2);
+    }
 
     useEffect(() => {
         const onDelete = msg => {
@@ -177,11 +242,11 @@ function App({socket}) {
                 setLinks(previous => {
                     let cpy = {...previous};
                     Object.keys(previous).forEach(key => {
-                        let split_relationship = key.split(' ');
-                        let first_node = split_relationship[0];
-                        let second_node = split_relationship[2];
+                        let splitRelationship = key.split(' ');
+                        let firstNode = splitRelationship[0];
+                        let secondNode = splitRelationship[2];
                         
-                        if (first_node.startsWith(msg.uri) || second_node.startsWith(msg.uri)) {
+                        if (firstNode.startsWith(msg.uri) || secondNode.startsWith(msg.uri)) {
                             delete cpy[key];
                         }
                     });
@@ -194,7 +259,7 @@ function App({socket}) {
         }
 
         const onCreate = msg => {
-            if (Object.keys(nodes).length >= max_nodes) {
+            if (Object.keys(nodes).length >= maxNodes) {
                 return;
             }
 
@@ -238,7 +303,7 @@ function App({socket}) {
                 let rootExists = nodes[msg.rootUri] !== undefined;
                 let nodeExists = nodes[msg.uri] !== undefined;
 
-                if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= max_nodes) {
+                if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
                     return;
                 }
 
@@ -261,7 +326,7 @@ function App({socket}) {
                 let parentExists = nodes[msg.parentUri] !== undefined;
                 let nodeExists = nodes[msg.uri] !== undefined;
 
-                if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= max_nodes) {
+                if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
                     return;
                 }
 
@@ -284,7 +349,7 @@ function App({socket}) {
                 let p1Exists = nodes[msg.authorDid] !== undefined;
                 let p2Exists = nodes[msg.subjectDid] !== undefined;
 
-                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= max_nodes) {
+                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= maxNodes) {
                     return;
                 }
 
@@ -316,7 +381,7 @@ function App({socket}) {
                 let personExists = nodes[msg.authorDid] !== undefined;
                 let postExists = nodes[msg.postUri] !== undefined;
                 
-                if ((!personExists || !postExists) && Object.keys(nodes).length >= max_nodes) {
+                if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
                     return;
                 }
 
@@ -360,26 +425,26 @@ function App({socket}) {
 
     return (
         <>
-            {selectedNode && 
-            <div className='nodeInfo' style={{position: 'absolute', left: `${windowSize[0] / 2 + 50}px`, top: `${windowSize[1] / 2 - 50}px`}}>
-                <div className='infoTitle'>
-                    Info 
-                    <div className='exit' onClick={() => {
-                        setSelectedNode(null);
-                        selectedNodes.clear();
-                        selectedLinks.clear();
-                        updateSelected();
-                    }}/>
-                </div>
-                {
-                    selectedNode.id.startsWith('did') ? 
-                        <div> Node type: Person <br/> ID: {selectedNode.id} </div> : 
-                    selectedNode.text ? 
-                        <div> Node type: Post <br/> ID: {selectedNode.id} <br/> Text: {selectedNode.text} </div> :
-                    selectedNode.repostUri ? 
-                        <div> Node type: Repost <br/> ID: {selectedNode.id} </div> : 
-                    <div> Node type: Post <br/> ID: {selectedNode.id} </div>
-                }
+            <form className='searchbarContainer' onSubmit={handleFilterSubmit}>
+                <FontAwesomeIcon className='searchIcon' icon={faMagnifyingGlass}/>
+                <input className='searchbar' type='text' value={filterString} onChange={(e) => setFilterString(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleFilterSubmit(e)} placeholder='Search using ID...'/>
+                <button className='searchClearButton' onClick={(e) => {
+                    if (filterActive) {
+                        setFilterString('');
+                        setFilteredNodes({});
+                        setFilteredLinks({});
+                        setFilterActive(false);
+                        clearSelected();
+                    }
+                }}>
+                    Clear
+                </button>
+                <input className='searchSubmitButton' type='submit' value='Search'/>
+            </form>
+            {filterActive && Object.keys(filteredNodes).length === 0 && 
+            <div className='filterWarning'>
+                Zero nodes found for submitted search string.
+                Please enter a different search string or clear the current one.
             </div>}
             <div className='legend'>
                 Node types
@@ -395,8 +460,24 @@ function App({socket}) {
                     )
                 })}
             </div>
+            {selectedNode && 
+            <div className='nodeInfo'>
+                <div className='infoTitle'>
+                    Info 
+                    <div className='exit' onClick={clearSelected}/>
+                </div>
+                {
+                    selectedNode.id.startsWith('did') ? 
+                        <div> Node type: Person <br/> ID: {selectedNode.id} </div> : 
+                    selectedNode.text ? 
+                        <div> Node type: Post <br/> ID: {selectedNode.id} <br/> Text: {selectedNode.text} </div> :
+                    selectedNode.repostUri ? 
+                        <div> Node type: Repost <br/> ID: {selectedNode.id} </div> : 
+                    <div> Node type: Post <br/> ID: {selectedNode.id} </div>
+                }
+            </div>}
             <ForceGraph3D
-                graphData={{nodes:Object.values(nodes), links:Object.values(links)}}
+                graphData={filterActive ? {nodes: Object.values(filteredNodes), links: Object.values(filteredLinks)} : {nodes: Object.values(nodes), links: Object.values(links)}}
 
                 ref={fgRef}
                 backgroundColor='#71797E'
