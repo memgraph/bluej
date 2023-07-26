@@ -82,10 +82,8 @@ function App({socket}) {
     }, [selectedNodes, selectedLinks, updateSelected]);
 
     const handleClick = useCallback(node => {
-        const distance = 500;
-        const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
-
-        fgRef.current.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 2000);
+        const distance = 250;
+        fgRef.current.cameraPosition({x: node.x + distance, y: node.y + distance, z: node.z + distance}, node, 2000);
 
         if (Object.keys(nodes).length < maxNodes) {
             return;
