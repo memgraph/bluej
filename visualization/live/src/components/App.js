@@ -23,7 +23,9 @@ function App({socket}) {
     const [filteredLinks, setFilteredLinks] = useState({});
     const [filterActive, setFilterActive] = useState(false);
 
+    const fgRef = useRef();
     const maxNodes = 250;
+    const BFSDepth = 2;
 
     const nodeGroupNames = {
         1: 'Post',
@@ -60,8 +62,6 @@ function App({socket}) {
             window.removeEventListener('resize', handleWindowResize);
         };
     }, []);
-
-    const fgRef = useRef();
 
     const updateSelected = useCallback(() => {
         setSelectedNodes(selectedNodes);
@@ -224,9 +224,9 @@ function App({socket}) {
     const handleFilterSubmit = useCallback((e) => {
         e.preventDefault();
         clearSelected();
-        let tempFilteredNodes = filterBFS(filterString, nodes, links, 2);
+        let tempFilteredNodes = filterBFS(filterString, nodes, links, BFSDepth);
 
-        if (Object.keys(tempFilteredNodes).length > 0) {
+        if (tempFilteredNodes && Object.keys(tempFilteredNodes).length > 0) {
             let node = tempFilteredNodes[Object.keys(tempFilteredNodes)[0]];
             handleClick(node);
         }
@@ -262,6 +262,10 @@ function App({socket}) {
                         ...cpy
                     };
                 });
+
+                if (filterActive) {
+                    filterBFS(filterString, nodes, links, BFSDepth);
+                }
             }
         }
 
@@ -302,6 +306,10 @@ function App({socket}) {
                         source: msg.uri, target: msg.repostUri, value: 'is a repost of'
                     }
                 }));
+            }
+
+            if (filterActive) {
+                filterBFS(filterString, nodes, links, BFSDepth);
             }
         }
 
@@ -417,6 +425,10 @@ function App({socket}) {
                     }
                 }));
             }
+
+            if (filterActive) {
+                filterBFS(filterString, nodes, links, BFSDepth);
+            }
         }
 
         socket.on('create', onCreate);
@@ -428,7 +440,7 @@ function App({socket}) {
             socket.off('merge', onMerge);
             socket.off('delete', onDelete);
         };
-    }, [nodes, socket]);
+    }, [nodes, links, filterString, filterActive, socket]);
 
     return (
         <>
