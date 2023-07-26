@@ -331,6 +331,15 @@ function App({socket}) {
                     }));
                 }
 
+                if (!nodeExists) {
+                    setNodes(previous => ({
+                        ...previous,
+                        [msg.uri]: {
+                            id: msg.uri, group: 1
+                        }
+                    }));
+                }
+
                 setLinks(previous => ({
                     ...previous,
                     [msg.uri + ' hasRoot ' + msg.rootUri]: {
@@ -350,6 +359,15 @@ function App({socket}) {
                         ...previous,
                         [msg.parentUri]: {
                             id: msg.parentUri, group: 1
+                        }
+                    }));
+                }
+                
+                if (!nodeExists) {
+                    setNodes(previous => ({
+                        ...previous,
+                        [msg.uri]: {
+                            id: msg.uri, group: 1
                         }
                     }));
                 }
