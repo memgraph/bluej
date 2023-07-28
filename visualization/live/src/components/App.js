@@ -454,14 +454,21 @@ function App({socket}) {
             }
         }
 
+        const onInitial = msg => {
+            console.log(msg);
+        }
+
         socket.on('create', onCreate);
         socket.on('merge', onMerge);
         socket.on('delete', onDelete);
+        socket.on('initial', onInitial);
 
         return () => {
             socket.off('create', onCreate);
             socket.off('merge', onMerge);
             socket.off('delete', onDelete);
+            socket.off('initial', onInitial);
+
         };
     }, [nodes, links, filterString, filterActive, socket]);
 
