@@ -20,13 +20,21 @@ io.on('connection', (socket) => {
     console.log('\nUser connected.');
 
     socket.on('interest', async (clientInterest) => {
-        console.log('Client is interested in did: ' + clientInterest);
+        let property = '';
+
+        if (clientInterest.startsWith('at')) {
+            property = 'uri';
+        } else {
+            property = 'did';
+        }
+
+        console.log('Client is interested in ID: ' + clientInterest);
 
         const session = driver.session();
 
         try {
             const results = await session.run(
-                `MATCH (p {did: "${clientInterest}"})
+                `MATCH (p {${property}: "${clientInterest}"})
                 MATCH path=(p)-[*bfs 1..${BFSDepth}]-(r)
                 UNWIND relationships(path) AS relationship
                 RETURN startNode(relationship) AS startNode, relationship, endNode(relationship) AS endNode;`
