@@ -82,8 +82,15 @@ function App({socket}) {
     }, [selectedNodes, selectedLinks, updateSelected]);
 
     const handleClick = useCallback(node => {
-        const distance = 250;
-        fgRef.current.cameraPosition({x: node.x + distance, y: node.y + distance, z: node.z + distance}, node, 2000);
+        const animationTime = 2000;
+
+        if (node.x === 0 && node.y === 0 && node.z === 0) {
+            fgRef.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
+        } else {
+            const distance = 500;
+            const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+            fgRef.current.cameraPosition({x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, animationTime);
+        }
 
         if (Object.keys(nodes).length < maxNodes) {
             return;
