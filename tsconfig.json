@@ -3,6 +3,7 @@
   "compilerOptions": {
     "lib": [
       "ESNext",
+      "DOM"
     ], 
     "outDir": "dist",
     "module": "CommonJS",
