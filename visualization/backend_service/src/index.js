@@ -40,7 +40,7 @@ io.on('connection', (socket) => {
                 RETURN startNode(relationship) AS startNode, relationship, endNode(relationship) AS endNode;`
             );
 
-            const new_results = [];
+            // const new_results = [];
 
             // const relationship_types = new Set();
             // const node_types = new Set();
@@ -73,15 +73,15 @@ io.on('connection', (socket) => {
                     target
                 };
 
-                // socket.emit('initial', {node1, relationship, node2});
-                new_results.push({node1, relationship, node2});
+                socket.emit('initial', {node1, relationship, node2});
+                // new_results.push({node1, relationship, node2});
 
                 // relationship_types.add(relationship.type);
                 // node_types.add(node1.type);
                 // node_types.add(node2.type);
             });
 
-            socket.emit('initial', new_results);
+            // socket.emit('initial', new_results);
 
             // console.log(relationship_types); // Set(5) { 'follow', 'like', 'author_of', 'parent', 'root' }
             // console.log(node_types); // Set(2) { 'Person', 'Post' }

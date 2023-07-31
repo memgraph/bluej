@@ -328,14 +328,14 @@ function App({socket}) {
 
         const onMerge = (msg, create = true) => {
             if (msg.type === 'root') {
+                let rootExists = nodes[msg.target] !== undefined;
+                let nodeExists = nodes[msg.source] !== undefined;
+
+                if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
+                    return;
+                }
+
                 if (create) {
-                    let rootExists = nodes[msg.target] !== undefined;
-                    let nodeExists = nodes[msg.source] !== undefined;
-    
-                    if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
-                        return;
-                    }
-    
                     if (!rootExists) {
                         setNodes(previous => ({
                             ...previous,
@@ -362,14 +362,14 @@ function App({socket}) {
                     }
                 }));
             } else if (msg.type === 'parent') {
+                let parentExists = nodes[msg.target] !== undefined;
+                let nodeExists = nodes[msg.source] !== undefined;
+
+                if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
+                    return;
+                }
+
                 if (create) {
-                    let parentExists = nodes[msg.target] !== undefined;
-                    let nodeExists = nodes[msg.source] !== undefined;
-    
-                    if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
-                        return;
-                    }
-    
                     if (!parentExists) {
                         setNodes(previous => ({
                             ...previous,
@@ -396,14 +396,14 @@ function App({socket}) {
                     }
                 }));
             } else if (msg.type === 'follow') {
+                let p1Exists = nodes[msg.source] !== undefined;
+                let p2Exists = nodes[msg.target] !== undefined;
+
+                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= maxNodes) {
+                    return;
+                }
+
                 if (create) {
-                    let p1Exists = nodes[msg.source] !== undefined;
-                    let p2Exists = nodes[msg.target] !== undefined;
-    
-                    if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= maxNodes) {
-                        return;
-                    }
-    
                     if (!p1Exists) {
                         setNodes(previous => ({
                             ...previous,
@@ -430,14 +430,14 @@ function App({socket}) {
                     }
                 }));
             } else if (msg.type === 'like') {
+                let personExists = nodes[msg.source] !== undefined;
+                let postExists = nodes[msg.target] !== undefined;
+                
+                if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
+                    return;
+                }
+
                 if (create) {
-                    let personExists = nodes[msg.source] !== undefined;
-                    let postExists = nodes[msg.target] !== undefined;
-                    
-                    if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
-                        return;
-                    }
-    
                     if (!personExists) {
                         setNodes(previous => ({
                             ...previous,
@@ -464,14 +464,14 @@ function App({socket}) {
                     }
                 }));
             } else if (msg.type === 'author_of') {
+                let personExists = nodes[msg.source] !== undefined;
+                let postExists = nodes[msg.target] !== undefined;
+                
+                if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
+                    return;
+                }
+
                 if (create) {
-                    let personExists = nodes[msg.source] !== undefined;
-                    let postExists = nodes[msg.target] !== undefined;
-                    
-                    if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
-                        return;
-                    }
-    
                     if (!personExists) {
                         setNodes(previous => ({
                             ...previous,
@@ -505,11 +505,18 @@ function App({socket}) {
         }
 
         const onInitial = msg => {
-            msg.forEach(currRel => { 
-                onCreate(currRel.node1);
-                onCreate(currRel.node2);
-                onMerge(currRel.relationship, false);
-            });
+            let node1ID = msg.node1.uri || msg.node1.did;
+            let node2ID = msg.node2.uri || msg.node2.did;
+
+            if (!nodes[node1ID]) {
+                onCreate(msg.node1);
+            }
+
+            if (!nodes[node2ID]) {
+                onCreate(msg.node2);
+            }
+
+            onMerge(msg.relationship, false);
         }
 
         socket.on('create', onCreate);
