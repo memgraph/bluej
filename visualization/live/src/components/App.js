@@ -18,14 +18,12 @@ function App({socket}) {
 
     const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
 
-    const [filterString, setFilterString] = useState('');
-    const [filteredNodes, setFilteredNodes] = useState({});
-    const [filteredLinks, setFilteredLinks] = useState({});
-    const [filterActive, setFilterActive] = useState(false);
+    const [interestID, setInterestID] = useState('');
+    const [searchString, setSearchString] = useState('');
+    const [searchSubmitted, setSearchSubmitted] = useState(false);
 
     const fgRef = useRef();
     const maxNodes = 250;
-    const BFSDepth = 2;
 
     const nodeGroupNames = {
         1: 'Post',
@@ -79,6 +77,19 @@ function App({socket}) {
         selectedLinks.clear();
         updateSelected();
     }, [selectedNodes, selectedLinks, updateSelected]);
+
+    const clear = () => {
+        setNodes({});
+        setLinks({});
+
+        setSelectedNode(null);
+        setSelectedNodes(new Set());
+        setSelectedLinks(new Set());
+
+        setHoverNode(null);
+        setHighlightNodes(new Set());
+        setHighlightLinks(new Set());
+    }
 
     const handleClick = useCallback(node => {
         const animationTime = 2000;
@@ -175,66 +186,14 @@ function App({socket}) {
         updateHighlight();
     };
 
-    const filterBFS = (filterStr, currNodes, currLinks, depth) => {
-        if (!filterStr) {
-            return;
-        }
-
-        let tempFilteredNodes = {};
-        let tempFilteredLinks = {};
-
-        let currQueue = [];
-
-        Object.values(currNodes).forEach(node => {
-            if (node.id.startsWith(filterStr)) {
-                tempFilteredNodes[node.id] = node;
-                currQueue.push(node);
-            }
-        });
-
-        for (let i = 0; i < depth; i++) {
-            let tempQueue = [];
-
-            currQueue.forEach(node => {                  
-                Object.keys(currLinks).forEach(key => {
-                    let splitRelationship = key.split(' ');
-                    let firstNode = splitRelationship[0];
-                    let secondNode = splitRelationship[2];
-
-                    if (firstNode.startsWith(node.id)) {
-                        tempFilteredNodes[secondNode] = currNodes[secondNode];
-                        tempQueue.push(currNodes[secondNode]);
-                    } else if (secondNode.startsWith(node.id)) {
-                        tempFilteredNodes[firstNode] = currNodes[firstNode];
-                        tempQueue.push(currNodes[firstNode]);
-                    } else {
-                        return;
-                    }
-
-                    tempFilteredLinks[key] = currLinks[key];
-                })
-            });
-
-            currQueue = tempQueue;
-        }
-
-        setFilteredNodes(tempFilteredNodes);
-        setFilteredLinks(tempFilteredLinks);
-        setFilterActive(true);
-
-        return tempFilteredNodes;
-    }
-
-    const handleFilterSubmit = useCallback((e) => {
+    const handleSearchSubmit = useCallback((e) => {
         e.preventDefault();
-        clearSelected();
-        let tempFilteredNodes = filterBFS(filterString, nodes, links, BFSDepth);
+        clear();
 
-        if (tempFilteredNodes && Object.keys(tempFilteredNodes).length > 0) {
-            let node = tempFilteredNodes[Object.keys(tempFilteredNodes)[0]];
-            handleClick(node);
-        }
-    }, [nodes, links, filterString, clearSelected, handleClick]);
+        socket.emit('interest', searchString);
+        setInterestID(searchString);
+        setSearchSubmitted(true);
+    }, [searchString, socket]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -266,10 +225,6 @@ function App({socket}) {
                         ...cpy
                     };
                 });
-
-                if (filterActive) {
-                    filterBFS(filterString, nodes, links, BFSDepth);
-                }
             }
         }
 
@@ -363,10 +318,6 @@ function App({socket}) {
                         }));
                     }
                 }
-            }
-
-            if (filterActive) {
-                filterBFS(filterString, nodes, links, BFSDepth);
             }
         }
 
@@ -542,25 +493,23 @@ function App({socket}) {
                     }
                 }));
             }
-
-            if (filterActive) {
-                filterBFS(filterString, nodes, links, BFSDepth);
-            }
         }
 
         const onInitial = msg => {
-            let node1ID = msg.node1.uri || msg.node1.did;
-            let node2ID = msg.node2.uri || msg.node2.did;
-
-            if (!nodes[node1ID]) {
-                onCreate(msg.node1, false);
+            if (interestID) {
+                let node1ID = msg.node1.uri || msg.node1.did;
+                let node2ID = msg.node2.uri || msg.node2.did;
+    
+                if (!nodes[node1ID]) {
+                    onCreate(msg.node1, false);
+                }
+    
+                if (!nodes[node2ID]) {
+                    onCreate(msg.node2, false);
+                }
+    
+                onMerge(msg.relationship, false);
             }
-
-            if (!nodes[node2ID]) {
-                onCreate(msg.node2, false);
-            }
-
-            onMerge(msg.relationship, false);
         }
 
         socket.on('create', onCreate);
@@ -575,31 +524,30 @@ function App({socket}) {
             socket.off('initial', onInitial);
 
         };
-    }, [nodes, links, filterString, filterActive, socket]);
+    }, [nodes, links, interestID, socket]);
 
     return (
         <>
-            <form className='searchbarContainer' onSubmit={handleFilterSubmit}>
+            <form className='searchbarContainer' onSubmit={handleSearchSubmit}>
                 <FontAwesomeIcon className='searchIcon' icon={faMagnifyingGlass}/>
-                <input className='searchbar' type='text' value={filterString} onChange={(e) => setFilterString(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleFilterSubmit(e)} placeholder='Search using ID...'/>
+                <input className='searchbar' type='text' value={searchString} onChange={(e) => setSearchString(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)} placeholder='Search using ID...'/>
                 <button className='searchClearButton' onClick={(e) => {
                     e.preventDefault();
-                    if (filterString) {
-                        setFilterString('');
+                    if (searchString) {
+                        setSearchString('');
                     }
-                    if (filterActive) {
-                        setFilterActive(false);
-                        setFilteredNodes({});
-                        setFilteredLinks({});
-                        clearSelected();
+                    if (interestID) {
+                        setInterestID('');
+                        setSearchSubmitted(false);
                     }
+                    clear();
                 }}>
                     Clear
                 </button>
                 <input className='searchSubmitButton' type='submit' value='Search'/>
             </form>
-            {filterActive && Object.keys(filteredNodes).length === 0 && 
-            <div className='filterWarning'>
+            {searchSubmitted && Object.keys(nodes).length === 0 && 
+            <div className='noNodesWarning'>
                 Zero nodes found for submitted search string.
                 Please enter a different search string or clear the current one.
             </div>}
@@ -634,7 +582,7 @@ function App({socket}) {
                 }
             </div>}
             <ForceGraph3D
-                graphData={filterActive ? {nodes: Object.values(filteredNodes), links: Object.values(filteredLinks)} : {nodes: Object.values(nodes), links: Object.values(links)}}
+                graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
                 ref={fgRef}
                 backgroundColor='#71797E'

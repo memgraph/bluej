@@ -152,7 +152,7 @@
     cursor: pointer;
 }
 
-.filterWarning {
+.noNodesWarning {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -161,8 +161,6 @@
     background-color: #E0E0E0;
     border-radius: 5px;
     padding: 10px;
-    /* background-color: transparent;
-    color: #FFC516; */
     font-size: 17.5px;
     text-align: center;
 }
