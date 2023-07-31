@@ -104,8 +104,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             method: "POST",
             body: JSON.stringify({
               type: 'root', 
-              uri: post.uri, 
-              rootUri: replyRoot
+              source: post.uri, 
+              target: replyRoot
             }),
             headers: {
               "Content-type": "application/json; charset=UTF-8"
@@ -128,8 +128,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             method: "POST",
             body: JSON.stringify({
               type: 'parent', 
-              uri: post.uri, 
-              parentUri: replyParent
+              source: post.uri, 
+              target: replyParent
             }),
             headers: {
               "Content-type": "application/json; charset=UTF-8"
@@ -167,8 +167,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           method: "POST",
           body: JSON.stringify({
             type: 'follow', 
-            authorDid: follow.author, 
-            subjectDid: follow.record.subject
+            source: follow.author, 
+            target: follow.record.subject
           }),
           headers: {
             "Content-type": "application/json; charset=UTF-8"
@@ -200,8 +200,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           method: "POST",
           body: JSON.stringify({
             type: 'like', 
-            authorDid: like.author, 
-            postUri: like.record.subject.uri
+            source: like.author, 
+            target: like.record.subject.uri
           }),
           headers: {
             "Content-type": "application/json; charset=UTF-8"

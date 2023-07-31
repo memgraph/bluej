@@ -46,9 +46,10 @@ function App({socket}) {
     const linkColorScheme = {
         'has root': '#FFC516',
         'has parent': '#E30024',
-        'isRepostOf': '#FFFFFF',
+        'is a repost of': '#FFFFFF',
         'liked': '#6E0097',
         'followed': '#FF0097',
+        'is author of': '#FFFFFF'
     };
 
     useEffect(() => {
@@ -279,7 +280,14 @@ function App({socket}) {
                 return;
             }
 
-            if (msg.type === 'post') {
+            if (msg.type === 'person') {
+                setNodes(previous => ({
+                    ...previous,
+                    [msg.did]: {
+                        id: msg.did, group: 3
+                    }
+                }));
+            } else if (msg.type === 'post') {
                 setNodes(previous => ({
                     ...previous,
                     [msg.uri]: {
@@ -318,133 +326,175 @@ function App({socket}) {
             }
         }
 
-        const onMerge = msg => {
+        const onMerge = (msg, create = true) => {
             if (msg.type === 'root') {
-                let rootExists = nodes[msg.rootUri] !== undefined;
-                let nodeExists = nodes[msg.uri] !== undefined;
-
-                if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
-                    return;
-                }
-
-                if (!rootExists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.rootUri]: {
-                            id: msg.rootUri, group: 1
-                        }
-                    }));
-                }
-
-                if (!nodeExists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.uri]: {
-                            id: msg.uri, group: 1
-                        }
-                    }));
+                if (create) {
+                    let rootExists = nodes[msg.target] !== undefined;
+                    let nodeExists = nodes[msg.source] !== undefined;
+    
+                    if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
+                        return;
+                    }
+    
+                    if (!rootExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.target]: {
+                                id: msg.target, group: 1
+                            }
+                        }));
+                    }
+    
+                    if (!nodeExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.source]: {
+                                id: msg.source, group: 1
+                            }
+                        }));
+                    }
                 }
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.uri + ' hasRoot ' + msg.rootUri]: {
-                        source: msg.uri, target: msg.rootUri, value: 'has root'
+                    [msg.source + ' hasRoot ' + msg.target]: {
+                        source: msg.source, target: msg.target, value: 'has root'
                     }
                 }));
             } else if (msg.type === 'parent') {
-                let parentExists = nodes[msg.parentUri] !== undefined;
-                let nodeExists = nodes[msg.uri] !== undefined;
-
-                if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
-                    return;
-                }
-
-                if (!parentExists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.parentUri]: {
-                            id: msg.parentUri, group: 1
-                        }
-                    }));
-                }
-                
-                if (!nodeExists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.uri]: {
-                            id: msg.uri, group: 1
-                        }
-                    }));
+                if (create) {
+                    let parentExists = nodes[msg.target] !== undefined;
+                    let nodeExists = nodes[msg.source] !== undefined;
+    
+                    if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
+                        return;
+                    }
+    
+                    if (!parentExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.target]: {
+                                id: msg.target, group: 1
+                            }
+                        }));
+                    }
+                    
+                    if (!nodeExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.source]: {
+                                id: msg.source, group: 1
+                            }
+                        }));
+                    }
                 }
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.uri + ' hasParent ' + msg.parentUri]: {
-                        source: msg.uri, target: msg.parentUri, value: 'has parent'
+                    [msg.source + ' hasParent ' + msg.target]: {
+                        source: msg.source, target: msg.target, value: 'has parent'
                     }
                 }));
             } else if (msg.type === 'follow') {
-                let p1Exists = nodes[msg.authorDid] !== undefined;
-                let p2Exists = nodes[msg.subjectDid] !== undefined;
-
-                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= maxNodes) {
-                    return;
-                }
-
-                if (!p1Exists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.authorDid]: {
-                            id: msg.authorDid, group: 3
-                        }
-                    }));
-                }
-
-                if (!p2Exists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.subjectDid]: {
-                            id: msg.subjectDid, group: 3
-                        }
-                    }));
+                if (create) {
+                    let p1Exists = nodes[msg.source] !== undefined;
+                    let p2Exists = nodes[msg.target] !== undefined;
+    
+                    if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= maxNodes) {
+                        return;
+                    }
+    
+                    if (!p1Exists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.source]: {
+                                id: msg.source, group: 3
+                            }
+                        }));
+                    }
+    
+                    if (!p2Exists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.target]: {
+                                id: msg.target, group: 3
+                            }
+                        }));
+                    }
                 }
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.authorDid + ' followed ' + msg.subjectDid]: {
-                        source: msg.authorDid, target: msg.subjectDid, value: 'followed'
+                    [msg.source + ' followed ' + msg.target]: {
+                        source: msg.source, target: msg.target, value: 'followed'
                     }
                 }));
             } else if (msg.type === 'like') {
-                let personExists = nodes[msg.authorDid] !== undefined;
-                let postExists = nodes[msg.postUri] !== undefined;
-                
-                if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
-                    return;
-                }
-
-                if (!personExists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.authorDid]: {
-                            id: msg.authorDid, group: 3
-                        }
-                    }));
-                }
-
-                if (!postExists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.postUri]: {
-                            id: msg.postUri, group: 1
-                        }
-                    }));
+                if (create) {
+                    let personExists = nodes[msg.source] !== undefined;
+                    let postExists = nodes[msg.target] !== undefined;
+                    
+                    if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
+                        return;
+                    }
+    
+                    if (!personExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.source]: {
+                                id: msg.source, group: 3
+                            }
+                        }));
+                    }
+    
+                    if (!postExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.target]: {
+                                id: msg.target, group: 1
+                            }
+                        }));
+                    }
                 }
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.authorDid + ' liked ' + msg.postUri]: {
-                        source: msg.authorDid, target: msg.postUri, value: 'liked'
+                    [msg.source + ' liked ' + msg.target]: {
+                        source: msg.source, target: msg.target, value: 'liked'
+                    }
+                }));
+            } else if (msg.type === 'author_of') {
+                if (create) {
+                    let personExists = nodes[msg.source] !== undefined;
+                    let postExists = nodes[msg.target] !== undefined;
+                    
+                    if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
+                        return;
+                    }
+    
+                    if (!personExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.source]: {
+                                id: msg.source, group: 3
+                            }
+                        }));
+                    }
+    
+                    if (!postExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.target]: {
+                                id: msg.target, group: 1
+                            }
+                        }));
+                    }
+                }
+
+                setLinks(previous => ({
+                    ...previous,
+                    [msg.source + ' author of ' + msg.target]: {
+                        source: msg.source, target: msg.target, value: 'is author of'
                     }
                 }));
             }
@@ -455,7 +505,11 @@ function App({socket}) {
         }
 
         const onInitial = msg => {
-            console.log(msg);
+            msg.forEach(currRel => { 
+                onCreate(currRel.node1);
+                onCreate(currRel.node2);
+                onMerge(currRel.relationship, false);
+            });
         }
 
         socket.on('create', onCreate);

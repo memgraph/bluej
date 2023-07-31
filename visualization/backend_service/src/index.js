@@ -40,48 +40,48 @@ io.on('connection', (socket) => {
                 RETURN startNode(relationship) AS startNode, relationship, endNode(relationship) AS endNode;`
             );
 
-            // const new_results = [];
+            const new_results = [];
 
             // const relationship_types = new Set();
             // const node_types = new Set();
 
             results.records.forEach(record => {
                 const node1 = {
-                    type: record._fields[0].labels[0],
+                    type: record._fields[0].labels[0].toLowerCase(),
                     ...record._fields[0].properties
                 };
                 
                 const node2 = {
-                    type: record._fields[2].labels[0],
+                    type: record._fields[2].labels[0].toLowerCase(),
                     ...record._fields[2].properties
                 };
 
-                let start = '';
-                let end = '';
+                let source = '';
+                let target = '';
 
                 if (record._fields[1].startNodeElementId === record._fields[0].elementId) {
-                    start = record._fields[0].properties?.uri || record._fields[0].properties?.did;
-                    end = record._fields[2].properties?.uri || record._fields[2].properties?.did;
+                    source = record._fields[0].properties?.uri || record._fields[0].properties?.did;
+                    target = record._fields[2].properties?.uri || record._fields[2].properties?.did;
                 } else {
-                    start = record._fields[2].properties?.uri || record._fields[2].properties?.did;
-                    end = record._fields[0].properties?.uri || record._fields[0].properties?.did;
+                    source = record._fields[2].properties?.uri || record._fields[2].properties?.did;
+                    target = record._fields[0].properties?.uri || record._fields[0].properties?.did;
                 }
 
                 const relationship = {
                     type: record._fields[1].type.toLowerCase(),
-                    start,
-                    end
+                    source,
+                    target
                 };
 
-                socket.emit('initial', {node1, relationship, node2});
-                // new_results.push({node1, relationship, node2});
+                // socket.emit('initial', {node1, relationship, node2});
+                new_results.push({node1, relationship, node2});
 
                 // relationship_types.add(relationship.type);
                 // node_types.add(node1.type);
                 // node_types.add(node2.type);
             });
 
-            // socket.emit('initial', new_results);
+            socket.emit('initial', new_results);
 
             // console.log(relationship_types); // Set(5) { 'follow', 'like', 'author_of', 'parent', 'root' }
             // console.log(node_types); // Set(2) { 'Person', 'Post' }
