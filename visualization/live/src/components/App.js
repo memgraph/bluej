@@ -273,7 +273,7 @@ function App({socket}) {
             }
         }
 
-        const onCreate = msg => {
+        const onCreate = (msg, createAdditional = true) => {
             if (Object.keys(nodes).length >= maxNodes) {
                 return;
             }
@@ -292,18 +292,29 @@ function App({socket}) {
                         id: msg.uri, group: 1, author: msg.author, text: msg.text
                     }
                 }));
-            } else if (msg.type === 'repost') {
-                let originalPostExists = nodes[msg.repostUri] !== undefined;
 
-                if (!originalPostExists) {
-                    setNodes(previous => ({
-                        ...previous,
-                        [msg.repostUri]: {
-                            id: msg.repostUri, group: 1
+                if (createAdditional) {
+                    if (msg.author) {
+                        let personExists = nodes[msg.author] !== undefined;
+    
+                        if (!personExists) {
+                            setNodes(previous => ({
+                                ...previous,
+                                [msg.author]: {
+                                    id: msg.author, group: 2
+                                }
+                            }));
                         }
-                    }));
+                        
+                        setLinks(previous => ({
+                            ...previous,
+                            [msg.author + ' authorOf ' + msg.uri]: {
+                                source: msg.author, target: msg.uri, value: 'is author of'
+                            }
+                        }));
+                    }
                 }
-
+            } else if (msg.type === 'repost') {
                 setNodes(previous => ({
                     ...previous,
                     [msg.uri]: {
@@ -311,12 +322,47 @@ function App({socket}) {
                     }
                 }));
 
-                setLinks(previous => ({
-                    ...previous,
-                    [msg.uri + ' isRepostOf ' + msg.repostUri]: {
-                        source: msg.uri, target: msg.repostUri, value: 'is a repost of'
+                if (createAdditional) {
+                    if (msg.repostUri) {
+                        let originalPostExists = nodes[msg.repostUri] !== undefined;
+
+                        if (!originalPostExists) {
+                            setNodes(previous => ({
+                                ...previous,
+                                [msg.repostUri]: {
+                                    id: msg.repostUri, group: 1
+                                }
+                            }));
+                        }
+        
+                        setLinks(previous => ({
+                            ...previous,
+                            [msg.uri + ' isRepostOf ' + msg.repostUri]: {
+                                source: msg.uri, target: msg.repostUri, value: 'is a repost of'
+                            }
+                        }));
                     }
-                }));
+
+                    if (msg.author) {
+                        let personExists = nodes[msg.author] !== undefined;
+    
+                        if (!personExists) {
+                            setNodes(previous => ({
+                                ...previous,
+                                [msg.author]: {
+                                    id: msg.author, group: 2
+                                }
+                            }));
+                        }
+                        
+                        setLinks(previous => ({
+                            ...previous,
+                            [msg.author + ' authorOf ' + msg.uri]: {
+                                source: msg.author, target: msg.uri, value: 'is author of'
+                            }
+                        }));
+                    }
+                }
             }
 
             if (filterActive) {
@@ -507,11 +553,11 @@ function App({socket}) {
             let node2ID = msg.node2.uri || msg.node2.did;
 
             if (!nodes[node1ID]) {
-                onCreate(msg.node1);
+                onCreate(msg.node1, false);
             }
 
             if (!nodes[node2ID]) {
-                onCreate(msg.node2);
+                onCreate(msg.node2, false);
             }
 
             onMerge(msg.relationship, false);
