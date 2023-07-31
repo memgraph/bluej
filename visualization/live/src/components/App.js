@@ -29,18 +29,16 @@ function App({socket}) {
 
     const nodeGroupNames = {
         1: 'Post',
-        2: 'Repost',
-        3: 'Person',
-        4: 'Highlighted/Selected',
-        5: 'Neighbouring Node'
+        2: 'Person',
+        3: 'Highlighted/Selected',
+        4: 'Neighbouring Node'
     }
 
     const nodeColorScheme = {
         1: '#FFC516',
-        2: '#E30024',
-        3: '#6E0097',
-        4: '#4ed5ed',
-        5: '#a5ed4e'
+        2: '#6E0097',
+        3: '#4ed5ed',
+        4: '#a5ed4e'
     };
 
     const linkColorScheme = {
@@ -284,7 +282,7 @@ function App({socket}) {
                 setNodes(previous => ({
                     ...previous,
                     [msg.did]: {
-                        id: msg.did, group: 3
+                        id: msg.did, group: 2
                     }
                 }));
             } else if (msg.type === 'post') {
@@ -309,7 +307,7 @@ function App({socket}) {
                 setNodes(previous => ({
                     ...previous,
                     [msg.uri]: {
-                        id: msg.uri, group: 2, author: msg.author, repostUri: msg.repostUri
+                        id: msg.uri, group: 1, author: msg.author, repostUri: msg.repostUri
                     }
                 }));
 
@@ -408,7 +406,7 @@ function App({socket}) {
                         setNodes(previous => ({
                             ...previous,
                             [msg.source]: {
-                                id: msg.source, group: 3
+                                id: msg.source, group: 2
                             }
                         }));
                     }
@@ -417,7 +415,7 @@ function App({socket}) {
                         setNodes(previous => ({
                             ...previous,
                             [msg.target]: {
-                                id: msg.target, group: 3
+                                id: msg.target, group: 2
                             }
                         }));
                     }
@@ -442,7 +440,7 @@ function App({socket}) {
                         setNodes(previous => ({
                             ...previous,
                             [msg.source]: {
-                                id: msg.source, group: 3
+                                id: msg.source, group: 2
                             }
                         }));
                     }
@@ -476,7 +474,7 @@ function App({socket}) {
                         setNodes(previous => ({
                             ...previous,
                             [msg.source]: {
-                                id: msg.source, group: 3
+                                id: msg.source, group: 2
                             }
                         }));
                     }
@@ -603,10 +601,10 @@ function App({socket}) {
                 nodeRelSize={10}
                 nodeColor={node => {
                     if (hoverNode === node || selectedNode === node) {
-                        return nodeColorScheme[4]
+                        return nodeColorScheme[3]
                     }
                     if (highlightNodes.has(node) || selectedNodes.has(node)) {
-                        return nodeColorScheme[5]
+                        return nodeColorScheme[4]
                     }
                     return nodeColorScheme[node.group]
                 }}
