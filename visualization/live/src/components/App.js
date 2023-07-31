@@ -493,7 +493,7 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.source + ' author of ' + msg.target]: {
+                    [msg.source + ' authorOf ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'is author of'
                     }
                 }));
