@@ -13,7 +13,7 @@ router.post('/', (req, res) => {
         Object.entries(sockets).forEach(([socketID, socket]) => {
             const interests = clientInterests[socketID];
     
-            if (!interests || author in interests) {
+            if (!interests || interests.includes(author)) {
                 socket.emit('merge', req.body);
             }
         });
