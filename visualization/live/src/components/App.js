@@ -179,6 +179,7 @@ function App({socket}) {
         clear();
 
         socket.emit('interest', searchString);
+
         setInterestID(searchString);
         setSearchSubmitted(true);
     }, [searchString, socket]);
@@ -484,18 +485,28 @@ function App({socket}) {
         }
 
         const onInterest = msg => {
-            let node1ID = msg.node1.uri || msg.node1.did;
-            let node2ID = msg.node2.uri || msg.node2.did;
+            clear();
 
-            if (!nodes[node1ID]) {
-                onCreate(msg.node1, false);
+            if (msg.length > 0) {
+                let startNode = msg[0];
+                onCreate(startNode);
+                msg.shift();
+    
+                msg.forEach(curr_rel => {
+                    let node1ID = curr_rel.node1.did;
+                    let node2ID = curr_rel.node2.did;
+        
+                    if (!nodes[node1ID]) {
+                        onCreate(curr_rel.node1, false);
+                    }
+        
+                    if (!nodes[node2ID]) {
+                        onCreate(curr_rel.node2, false);
+                    }
+        
+                    onMerge(curr_rel.relationship, false);
+                });
             }
-
-            if (!nodes[node2ID]) {
-                onCreate(msg.node2, false);
-            }
-
-            onMerge(msg.relationship, false);
         }
 
         const eventName = `initial ${interestID}`
