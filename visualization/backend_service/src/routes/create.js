@@ -1,11 +1,19 @@
 const express = require('express');
-const { io } = require('../index');
+const { sockets, clientInterests } = require('../index');
 const { verbose } = require('../config');
 
 const router = express.Router();
 
 router.post('/', (req, res) => {
-    io.emit('create', req.body);
+    const author = req.body.author;
+
+    Object.entries(sockets).forEach(([socketID, socket]) => {
+        const interests = clientInterests[socketID];
+
+        if (!interests || author in interests) {
+            socket.emit('create', req.body);
+        }
+    });
 
     if (verbose) {
         process.stdout.write('C');

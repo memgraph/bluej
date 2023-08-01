@@ -102,10 +102,6 @@ function App({socket}) {
             fgRef.current.cameraPosition({x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, animationTime);
         }
 
-        if (Object.keys(nodes).length < maxNodes) {
-            return;
-        }
-
         clearSelected();
 
         setTimeout(() => {
@@ -126,7 +122,7 @@ function App({socket}) {
             setSelectedNode(node);
             updateSelected();
         }, 2000);
-    }, [fgRef, nodes, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
+    }, [fgRef, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
 
     const updateHighlight = () => {
         setHighlightNodes(highlightNodes);
@@ -140,10 +136,6 @@ function App({socket}) {
     };
 
     const handleNodeHover = node => {
-        if (Object.keys(nodes).length < maxNodes) {
-            return;
-        }
-
         highlightNodes.clear();
         highlightLinks.clear();
 
@@ -170,10 +162,6 @@ function App({socket}) {
     };
 
     const handleLinkHover = link => {
-        if (Object.keys(nodes).length < maxNodes) {
-            return;
-        }
-
         highlightNodes.clear();
         highlightLinks.clear();
 
@@ -495,33 +483,33 @@ function App({socket}) {
             }
         }
 
-        const onInitial = msg => {
-            if (interestID) {
-                let node1ID = msg.node1.uri || msg.node1.did;
-                let node2ID = msg.node2.uri || msg.node2.did;
-    
-                if (!nodes[node1ID]) {
-                    onCreate(msg.node1, false);
-                }
-    
-                if (!nodes[node2ID]) {
-                    onCreate(msg.node2, false);
-                }
-    
-                onMerge(msg.relationship, false);
+        const onInterest = msg => {
+            let node1ID = msg.node1.uri || msg.node1.did;
+            let node2ID = msg.node2.uri || msg.node2.did;
+
+            if (!nodes[node1ID]) {
+                onCreate(msg.node1, false);
             }
+
+            if (!nodes[node2ID]) {
+                onCreate(msg.node2, false);
+            }
+
+            onMerge(msg.relationship, false);
         }
+
+        const eventName = `initial ${interestID}`
 
         socket.on('create', onCreate);
         socket.on('merge', onMerge);
         socket.on('delete', onDelete);
-        socket.on('initial', onInitial);
+        socket.on(eventName, onInterest);
 
         return () => {
             socket.off('create', onCreate);
             socket.off('merge', onMerge);
             socket.off('delete', onDelete);
-            socket.off('initial', onInitial);
+            socket.off(eventName, onInterest);
 
         };
     }, [nodes, links, interestID, socket]);
@@ -530,7 +518,7 @@ function App({socket}) {
         <>
             <form className='searchbarContainer' onSubmit={handleSearchSubmit}>
                 <FontAwesomeIcon className='searchIcon' icon={faMagnifyingGlass}/>
-                <input className='searchbar' type='text' value={searchString} onChange={(e) => setSearchString(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)} placeholder='Search using ID...'/>
+                <input className='searchbar' type='text' value={searchString} onChange={(e) => setSearchString(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)} placeholder='Subscribe with user ID...'/>
                 <button className='searchClearButton' onClick={(e) => {
                     e.preventDefault();
                     if (searchString) {
@@ -539,17 +527,18 @@ function App({socket}) {
                     if (interestID) {
                         setInterestID('');
                         setSearchSubmitted(false);
+                        socket.emit('interest', '');
                     }
                     clear();
                 }}>
                     Clear
                 </button>
-                <input className='searchSubmitButton' type='submit' value='Search'/>
+                <input className='searchSubmitButton' type='submit' value='Subscribe'/>
             </form>
             {searchSubmitted && Object.keys(nodes).length === 0 && 
             <div className='noNodesWarning'>
-                Zero nodes found for submitted search string.
-                Please enter a different search string or clear the current one.
+                Zero nodes found for subscribed user ID.
+                Please wait a bit, enter a different ID or clear the current one.
             </div>}
             <div className='legend'>
                 Node types

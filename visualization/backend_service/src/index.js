@@ -1,6 +1,6 @@
 const express = require('express');
 const { Server } = require('socket.io');
-const { PORT, BFSDepth } = require('./config');
+const { PORT } = require('./config');
 const neo4j = require('neo4j-driver');
 const driver = neo4j.driver('bolt://localhost:7687');
 
@@ -16,87 +16,119 @@ const io = new Server(server, {
     }
 });
 
+const sockets = {};
+const clientInterests = {};
+
 io.on('connection', (socket) => {
     console.log('\nUser connected.');
 
+    sockets[socket.id] = socket;
+
     socket.on('interest', async (clientInterest) => {
-        let property = '';
+        if (clientInterest !== '') {
+            console.log('Client is interested in DID: ' + clientInterest);
 
-        if (clientInterest.startsWith('at')) {
-            property = 'uri';
-        } else {
-            property = 'did';
-        }
+            const session = driver.session();
+    
+            try {
+                const DIDs = [];
 
-        console.log('Client is interested in ID: ' + clientInterest);
+                const interestPerson = await session.run(`MATCH (interest:Person {did: "${clientInterest}"}) RETURN interest;`);
+                const initialRecord = interestPerson.records[0];
 
-        const session = driver.session();
+                if (initialRecord) {
+                    DIDs.push(clientInterest);
 
-        try {
-            const results = await session.run(
-                `MATCH (p {${property}: "${clientInterest}"})
-                MATCH path=(p)-[*bfs 1..${BFSDepth}]-(r)
-                UNWIND relationships(path) AS relationship
-                RETURN startNode(relationship) AS startNode, relationship, endNode(relationship) AS endNode;`
-            );
+                    socket.emit('create', {
+                        type: initialRecord._fields[0].labels[0].toLowerCase(),
+                        ...initialRecord._fields[0].properties
+                    });
 
-            // const new_results = [];
+                    const closeFollowers = await session.run(
+                        `MATCH (interested:Person {did: "${clientInterest}"})-[follow:FOLLOW]->(follower:Person)-[]->(post:Post)
+                        RETURN interested, follow, follower, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
+                    );
+    
+                    if (closeFollowers.records[0]._fields[0] !== null) {
+                        let cnt = 0;
+    
+                        DIDs.push(clientInterest);
 
-            // const relationship_types = new Set();
-            // const node_types = new Set();
-
-            results.records.forEach(record => {
-                const node1 = {
-                    type: record._fields[0].labels[0].toLowerCase(),
-                    ...record._fields[0].properties
-                };
-                
-                const node2 = {
-                    type: record._fields[2].labels[0].toLowerCase(),
-                    ...record._fields[2].properties
-                };
-
-                let source = '';
-                let target = '';
-
-                if (record._fields[1].startNodeElementId === record._fields[0].elementId) {
-                    source = record._fields[0].properties?.uri || record._fields[0].properties?.did;
-                    target = record._fields[2].properties?.uri || record._fields[2].properties?.did;
-                } else {
-                    source = record._fields[2].properties?.uri || record._fields[2].properties?.did;
-                    target = record._fields[0].properties?.uri || record._fields[0].properties?.did;
+                        // const new_results = [];
+    
+                        closeFollowers.records.forEach(record => {
+                            DIDs.push(record._fields[2].properties.did);
+    
+                            if (cnt >= 50) {
+                                return;
+                            }
+    
+                            const node1 = {
+                                type: record._fields[0].labels[0].toLowerCase(),
+                                ...record._fields[0].properties
+                            };
+                            
+                            const node2 = {
+                                type: record._fields[2].labels[0].toLowerCase(),
+                                ...record._fields[2].properties
+                            };
+            
+                            let source = record._fields[0].properties.did;
+                            let target = record._fields[2].properties.did;
+            
+                            const relationship = {
+                                type: record._fields[1].type.toLowerCase(),
+                                source,
+                                target
+                            };
+            
+                            socket.emit(`initial ${clientInterest}`, {node1, relationship, node2});
+                            // new_results.push({node1, relationship, node2});
+    
+                            cnt++;
+                        });
+                    }
+                    
+                    const distantFollowers = await session.run(
+                        `MATCH (p:Person {did: "${clientInterest}"})-[:FOLLOW *2]->(follower:Person)-[]->(post:Post)
+                        RETURN follower.did AS did, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
+                    );
+    
+                    if (distantFollowers.records[0]._fields[0] !== null) {
+                        distantFollowers.records.forEach(record => {
+                            DIDs.push(record._fields[0]);
+                        });
+                    }
                 }
 
-                const relationship = {
-                    type: record._fields[1].type.toLowerCase(),
-                    source,
-                    target
-                };
+                clientInterests[socket.id] = DIDs;
+            } finally {
+                await session.close();
 
-                socket.emit('initial', {node1, relationship, node2});
-                // new_results.push({node1, relationship, node2});
-
-                // relationship_types.add(relationship.type);
-                // node_types.add(node1.type);
-                // node_types.add(node2.type);
-            });
-
-            // socket.emit('initial', new_results);
-
-            // console.log(relationship_types); // Set(5) { 'follow', 'like', 'author_of', 'parent', 'root' }
-            // console.log(node_types); // Set(2) { 'Person', 'Post' }
-        } finally {
-            await session.close();
+                console.log(clientInterests);
+            }
+        } else {
+            if (clientInterests[socket.id]) {
+                delete clientInterests[socket.id];
+            }
         }
     })
 
     socket.on('disconnect', () => {
         console.log('\nUser disconnected.');
+
+        delete sockets[socket.id];
+
+        if (clientInterests[socket.id]) {
+            delete clientInterests[socket.id];
+        }
     });
 });
 
 module.exports = {
-    io: io
+    io,
+    sockets,
+    clientInterests
 };
 
 app.use(express.json());
