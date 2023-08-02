@@ -546,8 +546,6 @@ function App({socket}) {
                         <div> Node type: Person <br/> ID: {selectedNode.id} </div> : 
                     selectedNode.text ? 
                         <div> Node type: Post <br/> ID: {selectedNode.id} <br/> Text: {selectedNode.text} </div> :
-                    selectedNode.repostUri ? 
-                        <div> Node type: Repost <br/> ID: {selectedNode.id} </div> : 
                     <div> Node type: Post <br/> ID: {selectedNode.id} </div>
                 }
             </div>}

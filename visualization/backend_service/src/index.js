@@ -33,6 +33,7 @@ io.on('connection', (socket) => {
             try {
                 // Initialization of the DID interest array
                 const DIDs = [];
+                const results = [];
 
                 const interestPerson = await session.run(`MATCH (interest:Person {did: "${clientInterest}"}) RETURN interest;`);
                 const initialRecord = interestPerson.records[0];
@@ -41,10 +42,10 @@ io.on('connection', (socket) => {
                     DIDs.push(clientInterest);
 
                     // Initialize visualization array with filtered node
-                    const results = [{
+                    results.push({
                         type: initialRecord._fields[0].labels[0].toLowerCase(),
                         ...initialRecord._fields[0].properties
-                    }];
+                    });
 
                     // Find the most active direct friends, add some of them (nodeCount - 1) to visualization array
                     const closeFollowers = await session.run(
@@ -97,11 +98,10 @@ io.on('connection', (socket) => {
                             DIDs.push(record._fields[0]);
                         });
                     }
-
-                    socket.emit(`initial ${clientInterest}`, results);
                 }
 
                 clientInterests[socket.id] = DIDs;
+                socket.emit(`initial ${clientInterest}`, results);
             } finally {
                 await session.close();
             }
