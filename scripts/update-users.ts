@@ -50,71 +50,79 @@ async function users(){
 
 async function updateUsers(userList: any[], firstCalled: number,
         numberOfUpdatedUsers: number, iterationNumber: number, waitingTime: number){
-    if(userList.length === 0){
-        return [];;
-    }
 
-    let startIteration = Date.now(); //Time of updating 5 users
-    let numOfRepeat = (userList.length > 5) ? 5 : userList.length; //Finding remaining number of users in the list
-    let lookingList : any[] = []; //List containing only dids for easier use
+    let endOfIteration = false
 
-    console.log("Remaining users to update: " + userList.length)
-
-    for(let i=0; i < numOfRepeat; i++){
-        const node : Map<string, any> | undefined = userList.pop();
-        if(node){
-            lookingList.push(node["_fields"][0]["properties"]["did"]);
+    while(!endOfIteration){
+        if(userList.length === 0){
+            endOfIteration = true;
+            break;
         }
-    }
-    let saveValues: any[] = []; //List containing all necessary info for updating users
 
-    console.log("Updating users with a did: ")
-    console.log(lookingList);
+        let startIteration = Date.now(); //Time of updating 5 users
+        let numOfRepeat = (userList.length > 5) ? 5 : userList.length; //Finding remaining number of users in the list
+        let lookingList : any[] = []; //List containing only dids for easier use
 
-    let numberOfSuccess = 0;
-    const session = driver.session();
-    const promises = lookingList.map(async (did) => {
-        let newItem = await getInfo(did);
-        if(newItem != undefined && newItem != null){
-        let saveValues = await saveOneToDb(newItem, session);
-            if(saveValues){
-                numberOfUpdatedUsers += 1;
-                numberOfSuccess += 1;
+        console.log("Remaining users to update: " + userList.length)
+
+        for(let i=0; i < numOfRepeat; i++){
+            const node : Map<string, any> | undefined = userList.pop();
+            if(node){
+                lookingList.push(node["_fields"][0]["properties"]["did"]);
             }
         }
-    });
+        let saveValues: any[] = []; //List containing all necessary info for updating users
 
-    await Promise.all(promises);
-    session.close();
+        console.log("Updating users with a did: ")
+        console.log(lookingList);
 
-    console.log(`Saved ${numberOfSuccess} users`);
+        let numberOfSuccess = 0;
+        const session = driver.session();
+        const promises = lookingList.map(async (did) => {
+            let newItem = await getInfo(did);
+            if(newItem != undefined && newItem != null){
+            let saveValues = await saveOneToDb(newItem, session);
+                if(saveValues){
+                    numberOfUpdatedUsers += 1;
+                    numberOfSuccess += 1;
+                }
+            }
+        });
 
-    let endIteration = Date.now(); //Time of end for updating 5 users
-    let durationOfIteration = endIteration.valueOf() - startIteration.valueOf() //How long did update of 5 users take
-    let durationOfRun = endIteration.valueOf() - firstCalled.valueOf(); //How long is updating whole list taking
-    console.log(`Duration of 1 iteration: ` + durationOfIteration);
-    console.log(`Number of saved users: ` + numberOfUpdatedUsers);
+        await Promise.all(promises);
+        session.close();
 
-    iterationTimes.push(durationOfIteration);
+        console.log(`Saved ${numberOfSuccess} users`);
 
-    //Return the rest if 5min had passed
-    if((Date.now().valueOf() - firstCalled) > (5 * 60 * 1000)){
-        printInfoForTheEnd(userList.length, numberOfUpdatedUsers, durationOfRun, durationOfIteration);
-        console.log("------------------------------------------") 
-        console.log("Ended 5 minute interval")
-        console.log("------------------------------------------") 
-        return userList;
+        let endIteration = Date.now(); //Time of end for updating 5 users
+        let durationOfIteration = endIteration.valueOf() - startIteration.valueOf() //How long did update of 5 users take
+        let durationOfRun = endIteration.valueOf() - firstCalled.valueOf(); //How long is updating whole list taking
+        console.log(`Duration of 1 iteration: ` + durationOfIteration);
+        console.log(`Number of saved users: ` + numberOfUpdatedUsers);
+
+        iterationTimes.push(durationOfIteration);
+
+        //Return the rest if 5min had passed
+        if((Date.now().valueOf() - firstCalled) > (5 * 60 * 1000)){
+            printInfoForTheEnd(userList.length, numberOfUpdatedUsers, durationOfRun, durationOfIteration);
+            console.log("------------------------------------------") 
+            console.log("Ended 5 minute interval")
+            console.log("------------------------------------------");
+            endOfIteration = true;
+            break;
+        }
+
+        //Calculating waiting time before next iteration so it evenly spreads over 5 minutes
+        if(iterationNumber % 10 === 0){
+            printInfoForTheEnd(userList.length, numberOfUpdatedUsers, durationOfRun, durationOfIteration);
+            waitingTime = calculateWaitingTime(numberOfUpdatedUsers, durationOfRun)
+        }
+
+        console.log("Resting...")
+        await delay(waitingTime);
+        iterationNumber += 1;
     }
-
-    //Calculating waiting time before next iteration so it evenly spreads over 5 minutes
-    if(iterationNumber % 10 === 0){
-        printInfoForTheEnd(userList.length, numberOfUpdatedUsers, durationOfRun, durationOfIteration);
-        waitingTime = calculateWaitingTime(numberOfUpdatedUsers, durationOfRun)
-    }
-
-    console.log("Resting...")
-    await delay(waitingTime);
-    return await updateUsers(userList, firstCalled, numberOfUpdatedUsers, iterationNumber += 1, waitingTime)
+    return userList;
 }
 
 //Calling api for getting info about users and returning its value
@@ -175,12 +183,7 @@ function printInfoForTheEnd (remainingUsersToUpdate: number, numberOfUpdatedUser
     console.log("Number of updated users: " + numberOfUpdatedUsers);
     console.log("Duration of run: " + durationOfRun);
     console.log("Duration of iteration: " + durationOfIteration);
-    console.log("------------------------------------------") 
-    console.log("Average time for iteration: " + (durationOfRun/(numberOfUpdatedUsers/5)));
-    console.log("Required number of remaining iterations: " + (remainingUsersToUpdate/5));
-    console.log("Estimated time required to solve it all: " + ((remainingUsersToUpdate/5)*(durationOfRun/(numberOfUpdatedUsers/5))));
-    console.log("Possible number of remaining iteration: " + (((5*60*1000)-durationOfRun)/(durationOfRun/(numberOfUpdatedUsers/5))));
-    console.log("POssible number of updated users in 5 minutes: " + (((5*60*1000)/(durationOfRun/(numberOfUpdatedUsers/5))) * 5))
+    console.log("------------------------------------------");
 }
 
 //Calculates new waiting time every 10 iterations based on average iteration time
