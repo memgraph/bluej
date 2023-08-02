@@ -5,27 +5,15 @@ const { verbose } = require('../config');
 const router = express.Router();
 
 router.post('/', (req, res) => {
-    const type = req.body.type;
+    const author = req.body?.author || req.body.source;
 
-    if (type === 'follow' || type === 'like') {
-        const author = req.body.source;
+    Object.entries(sockets).forEach(([socketID, socket]) => {
+        const interests = clientInterests[socketID];
 
-        Object.entries(sockets).forEach(([socketID, socket]) => {
-            const interests = clientInterests[socketID];
-    
-            if (!interests || interests.includes(author)) {
-                socket.emit('merge', req.body);
-            }
-        });
-    } else {
-        Object.entries(sockets).forEach(([socketID, socket]) => {
-            const interests = clientInterests[socketID];
-    
-            if (!interests) {
-                socket.emit('merge', req.body);
-            }
-        });
-    }
+        if (!interests || interests.includes(author)) {
+            socket.emit('merge', req.body);
+        }
+    });
 
     if (verbose) {
         process.stdout.write('M');

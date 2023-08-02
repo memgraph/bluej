@@ -40,7 +40,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           const result = await this.executeQuery("MATCH (p:Post {uri: $uri}) WITH p, p.author AS author DETACH DELETE p RETURN author;", {
             uri: post.uri
           })
-          //
+
           const author = result?.records[0]?.get(0);
           fetch(apiAddress + '/delete', {
             method: "POST",
@@ -57,8 +57,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
               console.log(err)
             }
           })
-          // this.io.emit('delete', {type: 'post', uri: post.uri})
-          //
+
         } catch (err) {
           if (outputError) console.error('[ERROR POST DELETE]:', err)
         }
@@ -74,7 +73,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           text: post.record.text,
           createdAt: post.record.createdAt
         })
-        //
+
         fetch(apiAddress + '/create', {
           method: "POST",
           body: JSON.stringify({
@@ -93,8 +92,23 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             console.log(err)
           }
         })
-        // this.io.emit('create', {type: 'post', uri: post.uri, cid: post.cid, author: post.author, text: post.record.text, createdAt: post.record.createdAt})
-        //
+
+        fetch(apiAddress + '/merge', {
+          method: "POST",
+          body: JSON.stringify({
+            type: 'author_of', 
+            source: post.author, 
+            target: post.uri
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8"
+          }
+        }).catch((err) => {
+          if (verbose) {
+            console.log(err)
+          }
+        })
+
         const replyRoot = post.record?.reply?.root ? post.record.reply.root.uri : null
         const replyParent = post.record?.reply?.parent ? post.record.reply.parent.uri : null
         if (replyRoot) {
@@ -102,13 +116,14 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             uri: post.uri,
             rootUri: replyRoot
           })
-          //
+
           fetch(apiAddress + '/merge', {
             method: "POST",
             body: JSON.stringify({
               type: 'root', 
               source: post.uri, 
-              target: replyRoot
+              target: replyRoot,
+              author: post.author
             }),
             headers: {
               "Content-type": "application/json; charset=UTF-8"
@@ -118,21 +133,20 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
               console.log(err)
             }
           })
-          // this.io.emit('merge', {type: 'root', uri: post.uri, rootUri: replyRoot})
-          //
         }
         if (replyParent) {
           await this.executeQuery("MERGE (post1:Post {uri: $uri}) MERGE (post2:Post {uri: $parentUri}) MERGE (post1)-[:PARENT {weight: 0}]->(post2)", {
             uri: post.uri,
             parentUri: replyParent
           })
-          //
+
           fetch(apiAddress + '/merge', {
             method: "POST",
             body: JSON.stringify({
               type: 'parent', 
               source: post.uri, 
-              target: replyParent
+              target: replyParent,
+              author: post.author
             }),
             headers: {
               "Content-type": "application/json; charset=UTF-8"
@@ -142,8 +156,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
               console.log(err)
             }
           })
-          // this.io.emit('merge', {type: 'parent', uri: post.uri, parentUri: replyParent})
-          //
         }
       }
     }
@@ -165,7 +177,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           authorDid: follow.author,
           subjectDid: follow.record.subject
         })
-        //
+
         fetch(apiAddress + '/merge', {
           method: "POST",
           body: JSON.stringify({
@@ -181,8 +193,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             console.log(err)
           }
         })
-        // this.io.emit('merge', {type: 'follow', authorDid: follow.author, subjectDid: follow.record.subject})
-        //
       }
     }
     if (ops.likes.deletes.length > 0) {
@@ -198,7 +208,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           authorDid: like.author,
           postUri: like.record.subject.uri
         })
-        //
+
         fetch(apiAddress + '/merge', {
           method: "POST",
           body: JSON.stringify({
@@ -214,8 +224,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             console.log(err)
           }
         })
-        // this.io.emit('merge', {type: 'like', authorDid: like.author, postUri: like.record.subject.uri})
-        //
       }
     }
     if (ops.reposts.deletes.length > 0) {
@@ -224,7 +232,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         const result = await this.executeQuery("MATCH (p:Post {uri: $uri}) WITH p, p.author AS author DETACH DELETE p RETURN author;", {
           uri: repost.uri
         })
-        //
+
         const author = result?.records[0]?.get(0);
         fetch(apiAddress + '/delete', {
           method: "POST",
@@ -241,21 +249,19 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             console.log(err)
           }
         })
-        // this.io.emit('delete', {type: 'repost', uri: repost.uri})
-        //
       }
     }
     if (ops.reposts.creates.length > 0) {
       for (const repost of ops.reposts.creates) {
         if (verbose) process.stdout.write('r')
-        await this.executeQuery("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) RETURN p", {
+        await this.executeQuery("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) MERGE (person)-[:AUTHOR_OF {weight: 0}]->(post)", {
           uri: repost.uri,
           cid: repost.cid,
           author: repost.author,
           repostUri: repost.record.subject.uri,
           createdAt: repost.record.createdAt
         })
-        //
+
         fetch(apiAddress + '/create', {
           method: "POST",
           body: JSON.stringify({
@@ -274,8 +280,44 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             console.log(err)
           }
         })
-        // this.io.emit('create', {type: 'repost', uri: repost.uri, cid: repost.cid, author: repost.author, repostUri: repost.record.subject.uri, createdAt: repost.record.createdAt})
-        //
+        
+        fetch(apiAddress + '/merge', {
+          method: "POST",
+          body: JSON.stringify({
+            type: 'author_of', 
+            source: repost.author, 
+            target: repost.uri
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8"
+          }
+        }).catch((err) => {
+          if (verbose) {
+            console.log(err)
+          }
+        })
+
+        await this.executeQuery("MERGE (repost:Post {uri: $uri}) MERGE (original:Post {uri: $originalUri}) MERGE (repost)-[:REPOST_OF {weight: 0}]->(original)", {
+          uri: repost.uri,
+          originalUri: repost.record.subject.uri
+        })
+
+        fetch(apiAddress + '/merge', {
+          method: "POST",
+          body: JSON.stringify({
+            type: 'repost_of', 
+            source: repost.uri, 
+            target: repost.record.subject.uri,
+            author: repost.author
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8"
+          }
+        }).catch((err) => {
+          if (verbose) {
+            console.log(err)
+          }
+        })
       }
     }
   }

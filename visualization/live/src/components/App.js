@@ -42,10 +42,10 @@ function App({socket}) {
     const linkColorScheme = {
         'has root': '#FFC516',
         'has parent': '#E30024',
-        'is a repost of': '#FFFFFF',
         'liked': '#6E0097',
         'followed': '#FF0097',
-        'is author of': '#FFFFFF'
+        'is author of': '#FFFFFF',
+        'is repost of': '#FFFFFF'
     };
 
     useEffect(() => {
@@ -217,7 +217,7 @@ function App({socket}) {
             }
         }
 
-        const onCreate = (msg, createAdditional = true) => {
+        const onCreate = msg => {
             if (Object.keys(nodes).length >= maxNodes) {
                 return;
             }
@@ -236,28 +236,6 @@ function App({socket}) {
                         id: msg.uri, group: 1, author: msg.author, text: msg.text
                     }
                 }));
-
-                if (createAdditional) {
-                    if (msg.author) {
-                        let personExists = nodes[msg.author] !== undefined;
-    
-                        if (!personExists) {
-                            setNodes(previous => ({
-                                ...previous,
-                                [msg.author]: {
-                                    id: msg.author, group: 2
-                                }
-                            }));
-                        }
-                        
-                        setLinks(previous => ({
-                            ...previous,
-                            [msg.author + ' authorOf ' + msg.uri]: {
-                                source: msg.author, target: msg.uri, value: 'is author of'
-                            }
-                        }));
-                    }
-                }
             } else if (msg.type === 'repost') {
                 setNodes(previous => ({
                     ...previous,
@@ -265,48 +243,6 @@ function App({socket}) {
                         id: msg.uri, group: 1, author: msg.author, repostUri: msg.repostUri
                     }
                 }));
-
-                if (createAdditional) {
-                    if (msg.repostUri) {
-                        let originalPostExists = nodes[msg.repostUri] !== undefined;
-
-                        if (!originalPostExists) {
-                            setNodes(previous => ({
-                                ...previous,
-                                [msg.repostUri]: {
-                                    id: msg.repostUri, group: 1
-                                }
-                            }));
-                        }
-        
-                        setLinks(previous => ({
-                            ...previous,
-                            [msg.uri + ' isRepostOf ' + msg.repostUri]: {
-                                source: msg.uri, target: msg.repostUri, value: 'is a repost of'
-                            }
-                        }));
-                    }
-
-                    if (msg.author) {
-                        let personExists = nodes[msg.author] !== undefined;
-    
-                        if (!personExists) {
-                            setNodes(previous => ({
-                                ...previous,
-                                [msg.author]: {
-                                    id: msg.author, group: 2
-                                }
-                            }));
-                        }
-                        
-                        setLinks(previous => ({
-                            ...previous,
-                            [msg.author + ' authorOf ' + msg.uri]: {
-                                source: msg.author, target: msg.uri, value: 'is author of'
-                            }
-                        }));
-                    }
-                }
             }
         }
 
@@ -479,6 +415,40 @@ function App({socket}) {
                     ...previous,
                     [msg.source + ' authorOf ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'is author of'
+                    }
+                }));
+            } else if (msg.type === 'repost_of') {
+                let repostExists = nodes[msg.source] !== undefined;
+                let originalPostExists = nodes[msg.target] !== undefined;
+
+                if ((!repostExists || !originalPostExists) && Object.keys(nodes).length >= maxNodes) {
+                    return;
+                }
+
+                if (create) {
+                    if (!repostExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.source]: {
+                                id: msg.source, group: 1
+                            }
+                        }));
+                    }
+    
+                    if (!originalPostExists) {
+                        setNodes(previous => ({
+                            ...previous,
+                            [msg.target]: {
+                                id: msg.target, group: 1
+                            }
+                        }));
+                    }
+                }
+
+                setLinks(previous => ({
+                    ...previous,
+                    [msg.source + ' isRepostOf ' + msg.target]: {
+                        source: msg.source, target: msg.target, value: 'is repost of'
                     }
                 }));
             }
