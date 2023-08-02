@@ -52,7 +52,7 @@ io.on('connection', (socket) => {
                         RETURN interested, follow, follower, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
                     );
     
-                    if (closeFollowers.records[0]._fields[0] !== null) {
+                    if (closeFollowers?.records[0]?._fields[0]) {
                         let cnt = 0;
     
                         closeFollowers.records.forEach(record => {
@@ -92,7 +92,7 @@ io.on('connection', (socket) => {
                         RETURN follower.did AS did, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
                     );
     
-                    if (distantFollowers.records[0]._fields[0] !== null) {
+                    if (distantFollowers?.records[0]?._fields[0]) {
                         distantFollowers.records.forEach(record => {
                             DIDs.push(record._fields[0]);
                         });

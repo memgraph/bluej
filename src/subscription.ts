@@ -1,4 +1,5 @@
-import { Driver, Session } from 'neo4j-driver'
+import { Driver, QueryResult } from 'neo4j-driver'
+import { Dict } from 'neo4j-driver-core/types/record'
 import { OutputSchema as RepoEvent, isCommit } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
 import { Database } from './db'
@@ -36,15 +37,17 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       for (const post of ops.posts.deletes) {
         if (verbose) process.stdout.write('P')
         try {
-          await this.executeQuery("MATCH (p:Post {uri: $uri}) DETACH DELETE p", {
+          const result = await this.executeQuery("MATCH (p:Post {uri: $uri}) WITH p, p.author AS author DETACH DELETE p RETURN author;", {
             uri: post.uri
           })
           //
+          const author = result?.records[0]?.get(0);
           fetch(apiAddress + '/delete', {
             method: "POST",
             body: JSON.stringify({
               type: 'post', 
-              uri: post.uri
+              uri: post.uri,
+              author
             }),
             headers: {
               "Content-type": "application/json; charset=UTF-8"
@@ -218,15 +221,17 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.reposts.deletes.length > 0) {
       for (const repost of ops.reposts.deletes) {
         if (verbose) process.stdout.write('R')
-        await this.executeQuery("MATCH (p:Post {uri: $uri}) DETACH DELETE p", {
+        const result = await this.executeQuery("MATCH (p:Post {uri: $uri}) WITH p, p.author AS author DETACH DELETE p RETURN author;", {
           uri: repost.uri
         })
         //
+        const author = result?.records[0]?.get(0);
         fetch(apiAddress + '/delete', {
           method: "POST",
           body: JSON.stringify({
             type: 'repost', 
-            uri: repost.uri
+            uri: repost.uri,
+            author
           }),
           headers: {
             "Content-type": "application/json; charset=UTF-8"
@@ -275,10 +280,11 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     }
   }
 
-  async executeQuery(query: string, params: object, retryCount: number = 10): Promise<void> {
+  async executeQuery(query: string, params: object, retryCount: number = 10): Promise<QueryResult<Dict> | undefined> {
     const session = this.driver.session()
+    let results: QueryResult<Dict> | undefined;
     try {
-      await session.run(query, params);
+      results = await session.run(query, params);
     } catch (error) {
       if (this.isRetryableError(error) && retryCount > 0) {
         this.queryQueue.push({
@@ -295,6 +301,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     } finally {
       session.close()
     }
+
+    return results;
   }
 
   private isRetryableError(error: any): boolean {
