@@ -16,6 +16,7 @@ function App({socket}) {
     const [selectedNodes, setSelectedNodes] = useState(new Set());
     const [selectedLinks, setSelectedLinks] = useState(new Set());
     const [selectedDescActive, setSelectedDescActive] = useState(false);
+    const [currTimeout, setCurrTimeout] = useState(null);
 
     const [highlighted, setHighlighted] = useState(false);
 
@@ -27,6 +28,7 @@ function App({socket}) {
 
     const fgRef = useRef();
     const maxNodes = 250;
+    const animationTime = 2000;
 
     const nodeGroupNames = {
         1: 'Post',
@@ -75,7 +77,7 @@ function App({socket}) {
         }
     }, [highlighted, highlightLinks, hoverNode, selectedNode]);
 
-    const clear = () => {
+    const clear = useCallback(() => {
         setNodes({});
         setLinks({});
 
@@ -84,12 +86,17 @@ function App({socket}) {
         setSelectedNode(null);
         setSelectedNodes(new Set());
         setSelectedLinks(new Set());
+
+        clearTimeout(currTimeout);
+        setCurrTimeout(null);
         setSelectedDescActive(false);
 
         setHoverNode(null);
         setHighlightNodes(new Set());
         setHighlightLinks(new Set());
-    }
+
+        fgRef.current.cameraPosition({x: 500, y: 500, z: 500}, null, animationTime);
+    }, [currTimeout]);
 
     const updateSelected = useCallback(() => {
         setSelectedNodes(selectedNodes);
@@ -103,16 +110,17 @@ function App({socket}) {
     }, [selectedNodes, selectedLinks]);
 
     const clearSelected = useCallback(() => {
+        clearTimeout(currTimeout);
+        setCurrTimeout(null);
         setSelectedDescActive(false);
+
         setSelectedNode(null);
         selectedNodes.clear();
         selectedLinks.clear();
         updateSelected();
-    }, [selectedNodes, selectedLinks, updateSelected]);
+    }, [selectedNodes, selectedLinks, currTimeout, updateSelected]);
 
     const handleClick = useCallback(node => {
-        const animationTime = 2000;
-
         if (node.x === 0 && node.y === 0 && node.z === 0) {
             fgRef.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
         } else {
@@ -140,9 +148,9 @@ function App({socket}) {
         setSelectedNode(node);
         updateSelected();
 
-        setTimeout(() => {
+        setCurrTimeout(setTimeout(() => {
             setSelectedDescActive(true);
-        }, 2000);
+        }, animationTime));
     }, [fgRef, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
 
     const updateHighlight = () => {
@@ -203,7 +211,7 @@ function App({socket}) {
 
         setInterestID(searchString);
         setSearchSubmitted(true);
-    }, [searchString, socket]);
+    }, [searchString, socket, clear]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -522,7 +530,7 @@ function App({socket}) {
             socket.off(eventName, onInterest);
 
         };
-    }, [nodes, links, highlighted, interestID, socket]);
+    }, [nodes, links, highlighted, interestID, socket, clear]);
 
     return (
         <>
@@ -564,7 +572,7 @@ function App({socket}) {
                     )
                 })}
             </div>
-            {selectedDescActive && 
+            {selectedDescActive && selectedNode &&
             <div className='nodeInfo'>
                 <div className='infoTitle'>
                     Info 
