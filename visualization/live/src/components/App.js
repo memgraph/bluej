@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
-import { TextField, InputAdornment, Button } from '@mui/material';
+import { TextField, InputAdornment, Button, Divider } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import SquareIcon from '@mui/icons-material/Square';
 
 function App({socket}) {
     const [nodes, setNodes] = useState({});
@@ -589,12 +590,14 @@ function App({socket}) {
                 Please wait a bit, enter a different ID or clear the current one.
             </div>}
             <div className='legend'>
-                Node types
-                <hr className='legendSeparator'/>
+                <div className='infoTitle'>
+                    Node types
+                </div>
+                <Divider/>
                 {Object.keys(nodeColorScheme).map(key => {
                     return (
                         <div className='legendItem'>
-                            <div className='legendColor' style={{backgroundColor: nodeColorScheme[key]}}/>
+                            <SquareIcon sx={{color: nodeColorScheme[key]}}/>
                             <div>
                                 {nodeGroupNames[key]}
                             </div>
@@ -608,6 +611,7 @@ function App({socket}) {
                     Info 
                     <div className='exit' onClick={clearSelected}/>
                 </div>
+                <Divider/>
                 {
                     selectedNode.id.startsWith('did') ? 
                         <div> Node type: Person <br/> ID: {selectedNode.id} </div> : 
