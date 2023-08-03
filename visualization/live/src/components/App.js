@@ -7,6 +7,9 @@ import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 function App({socket}) {
     const [nodes, setNodes] = useState({});
     const [links, setLinks] = useState({});
+    
+    const [tempNodes, setTempNodes] = useState({});
+    const [tempLinks, setTempLinks] = useState({});
 
     const [hoverNode, setHoverNode] = useState(null);
     const [highlightNodes, setHighlightNodes] = useState(new Set());
@@ -15,6 +18,9 @@ function App({socket}) {
     const [selectedNode, setSelectedNode] = useState(null);
     const [selectedNodes, setSelectedNodes] = useState(new Set());
     const [selectedLinks, setSelectedLinks] = useState(new Set());
+    const [selectedDescActive, setSelectedDescActive] = useState(false);
+
+    const [highlighted, setHighlighted] = useState(false);
 
     const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
 
@@ -54,11 +60,65 @@ function App({socket}) {
         };
       
         window.addEventListener('resize', handleWindowResize);
-    
+        
         return () => {
             window.removeEventListener('resize', handleWindowResize);
         };
     }, []);
+
+    useEffect(() => {
+        if (highlighted) {
+            if (!highlightLinks.size && !hoverNode && !selectedNode) {
+                setHighlighted(false);
+            }
+        } else {
+            if (highlightLinks.size || hoverNode || selectedNode) {
+                setHighlighted(true);
+            }
+        }
+    }, [highlighted, highlightLinks, hoverNode, selectedNode]);
+
+    useEffect(() => {
+        if (!highlighted) {
+            if (Object.keys(tempNodes).length) {
+                setNodes(previous => {
+                    return {
+                        ...previous,
+                        ...tempNodes
+                    };
+                });
+                setTempNodes({});
+            }
+
+            if (Object.keys(tempLinks).length) {
+                setLinks(previous => {
+                    return {
+                        ...previous,
+                        ...tempLinks
+                    };
+                });
+                setTempLinks({});
+            }
+        }
+    }, [highlighted, tempNodes, tempLinks]);
+
+    const clear = () => {
+        setNodes({});
+        setLinks({});
+
+        setTempNodes({});
+        setTempLinks({});
+        setHighlighted(false);
+
+        setSelectedNode(null);
+        setSelectedNodes(new Set());
+        setSelectedLinks(new Set());
+        setSelectedDescActive(false);
+
+        setHoverNode(null);
+        setHighlightNodes(new Set());
+        setHighlightLinks(new Set());
+    }
 
     const updateSelected = useCallback(() => {
         setSelectedNodes(selectedNodes);
@@ -72,24 +132,12 @@ function App({socket}) {
     }, [selectedNodes, selectedLinks]);
 
     const clearSelected = useCallback(() => {
+        setSelectedDescActive(false);
         setSelectedNode(null);
         selectedNodes.clear();
         selectedLinks.clear();
         updateSelected();
     }, [selectedNodes, selectedLinks, updateSelected]);
-
-    const clear = () => {
-        setNodes({});
-        setLinks({});
-
-        setSelectedNode(null);
-        setSelectedNodes(new Set());
-        setSelectedLinks(new Set());
-
-        setHoverNode(null);
-        setHighlightNodes(new Set());
-        setHighlightLinks(new Set());
-    }
 
     const handleClick = useCallback(node => {
         const animationTime = 2000;
@@ -104,23 +152,25 @@ function App({socket}) {
 
         clearSelected();
 
+        Object.keys(links).forEach(key => {
+            let splitRelationship = key.split(' ');
+            let firstNode = splitRelationship[0];
+            let secondNode = splitRelationship[2];
+            
+            if (firstNode.startsWith(node.id) || secondNode.startsWith(node.id)) {
+                let link = links[key];
+
+                selectedLinks.add(link);
+                selectedNodes.add(link.source);
+                selectedNodes.add(link.target);
+            }
+        });
+
+        setSelectedNode(node);
+        updateSelected();
+
         setTimeout(() => {
-            Object.keys(links).forEach(key => {
-                let splitRelationship = key.split(' ');
-                let firstNode = splitRelationship[0];
-                let secondNode = splitRelationship[2];
-                
-                if (firstNode.startsWith(node.id) || secondNode.startsWith(node.id)) {
-                    let link = links[key];
-
-                    selectedLinks.add(link);
-                    selectedNodes.add(link.source);
-                    selectedNodes.add(link.target);
-                }
-            });
-
-            setSelectedNode(node);
-            updateSelected();
+            setSelectedDescActive(true);
         }, 2000);
     }, [fgRef, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
 
@@ -174,7 +224,7 @@ function App({socket}) {
         updateHighlight();
     };
 
-    const handleSearchSubmit = useCallback((e) => {
+    const handleSearchSubmit = useCallback(e => {
         e.preventDefault();
         clear();
 
@@ -183,6 +233,34 @@ function App({socket}) {
         setInterestID(searchString);
         setSearchSubmitted(true);
     }, [searchString, socket]);
+
+    const setNodesDecorator = useCallback(obj => {
+        if (!highlighted) {
+            setNodes(previous => ({
+                ...previous,
+                ...obj
+            }));
+        } else {
+            setTempNodes(previous => ({
+                ...previous,
+                ...obj
+            }));
+        }
+    }, [highlighted]);
+
+    const setLinksDecorator = useCallback(obj => {
+        if (!highlighted) {
+            setLinks(previous => ({
+                ...previous,
+                ...obj
+            }));
+        } else {
+            setTempLinks(previous => ({
+                ...previous,
+                ...obj
+            }));
+        }
+    }, [highlighted]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -218,239 +296,218 @@ function App({socket}) {
         }
 
         const onCreate = msg => {
-            if (Object.keys(nodes).length >= maxNodes) {
+            if ((Object.keys(nodes).length + Object.keys(tempNodes).length) >= maxNodes) {
                 return;
             }
 
             if (msg.type === 'person') {
-                setNodes(previous => ({
-                    ...previous,
+                setNodesDecorator({
                     [msg.did]: {
                         id: msg.did, group: 2
                     }
-                }));
+                });
             } else if (msg.type === 'post') {
-                setNodes(previous => ({
-                    ...previous,
+                setNodesDecorator({
                     [msg.uri]: {
                         id: msg.uri, group: 1, author: msg.author, text: msg.text
                     }
-                }));
+                });
             } else if (msg.type === 'repost') {
-                setNodes(previous => ({
-                    ...previous,
+                setNodesDecorator({
                     [msg.uri]: {
                         id: msg.uri, group: 1, author: msg.author, repostUri: msg.repostUri
                     }
-                }));
+                });
             }
         }
 
         const onMerge = (msg, create = true) => {
             if (msg.type === 'root') {
-                let rootExists = nodes[msg.target] !== undefined;
-                let nodeExists = nodes[msg.source] !== undefined;
+                let rootExists = nodes[msg.target] !== undefined || tempNodes[msg.target] !== undefined;
+                let nodeExists = nodes[msg.source] !== undefined || tempNodes[msg.source] !== undefined;
 
-                if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
+                if ((!rootExists || !nodeExists) && (Object.keys(nodes).length + Object.keys(tempNodes).length) >= maxNodes) {
                     return;
                 }
 
                 if (create) {
                     if (!rootExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.target]: {
                                 id: msg.target, group: 1
                             }
-                        }));
+                        });
                     }
     
                     if (!nodeExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.source]: {
                                 id: msg.source, group: 1
                             }
-                        }));
+                        });
                     }
                 }
 
-                setLinks(previous => ({
-                    ...previous,
+                setLinksDecorator({
                     [msg.source + ' hasRoot ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'has root'
                     }
-                }));
+                });
             } else if (msg.type === 'parent') {
-                let parentExists = nodes[msg.target] !== undefined;
-                let nodeExists = nodes[msg.source] !== undefined;
+                let parentExists = nodes[msg.target] !== undefined || tempNodes[msg.target] !== undefined;
+                let nodeExists = nodes[msg.source] !== undefined || tempNodes[msg.source] !== undefined;
 
-                if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
+                if ((!parentExists || !nodeExists) && (Object.keys(nodes).length + Object.keys(tempNodes).length) >= maxNodes) {
                     return;
                 }
 
                 if (create) {
                     if (!parentExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.target]: {
                                 id: msg.target, group: 1
                             }
-                        }));
+                        });
                     }
                     
                     if (!nodeExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.source]: {
                                 id: msg.source, group: 1
                             }
-                        }));
+                        });
                     }
                 }
 
-                setLinks(previous => ({
-                    ...previous,
+                setLinksDecorator({
                     [msg.source + ' hasParent ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'has parent'
                     }
-                }));
+                });
             } else if (msg.type === 'follow') {
-                let p1Exists = nodes[msg.source] !== undefined;
-                let p2Exists = nodes[msg.target] !== undefined;
+                let p1Exists = nodes[msg.source] !== undefined || tempNodes[msg.source] !== undefined;
+                let p2Exists = nodes[msg.target] !== undefined || tempNodes[msg.target] !== undefined;
 
-                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= maxNodes) {
+                if ((!p1Exists || !p2Exists) && (Object.keys(nodes).length + Object.keys(tempNodes).length) >= maxNodes) {
                     return;
                 }
 
                 if (create) {
                     if (!p1Exists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.source]: {
                                 id: msg.source, group: 2
                             }
-                        }));
+                        });
                     }
     
                     if (!p2Exists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.target]: {
                                 id: msg.target, group: 2
                             }
-                        }));
+                        });
                     }
                 }
 
-                setLinks(previous => ({
-                    ...previous,
+                setLinksDecorator({
                     [msg.source + ' followed ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'followed'
                     }
-                }));
+                });
             } else if (msg.type === 'like') {
-                let personExists = nodes[msg.source] !== undefined;
-                let postExists = nodes[msg.target] !== undefined;
+                let personExists = nodes[msg.source] !== undefined || tempNodes[msg.source] !== undefined;
+                let postExists = nodes[msg.target] !== undefined || tempNodes[msg.target] !== undefined;
                 
-                if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
+                if ((!personExists || !postExists) && (Object.keys(nodes).length + Object.keys(tempNodes).length) >= maxNodes) {
                     return;
                 }
 
                 if (create) {
                     if (!personExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.source]: {
                                 id: msg.source, group: 2
                             }
-                        }));
+                        });
                     }
     
                     if (!postExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.target]: {
                                 id: msg.target, group: 1
                             }
-                        }));
+                        });
                     }
                 }
 
-                setLinks(previous => ({
-                    ...previous,
+                setLinksDecorator({
                     [msg.source + ' liked ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'liked'
                     }
-                }));
+                });
             } else if (msg.type === 'author_of') {
-                let personExists = nodes[msg.source] !== undefined;
-                let postExists = nodes[msg.target] !== undefined;
+                let personExists = nodes[msg.source] !== undefined || tempNodes[msg.source] !== undefined;
+                let postExists = nodes[msg.target] !== undefined || tempNodes[msg.target] !== undefined;
                 
-                if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
+                if ((!personExists || !postExists) && (Object.keys(nodes).length + Object.keys(tempNodes).length) >= maxNodes) {
                     return;
                 }
 
                 if (create) {
                     if (!personExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.source]: {
                                 id: msg.source, group: 2
                             }
-                        }));
+                        });
                     }
     
                     if (!postExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.target]: {
                                 id: msg.target, group: 1
                             }
-                        }));
+                        });
                     }
                 }
 
-                setLinks(previous => ({
-                    ...previous,
+                setLinksDecorator({
                     [msg.source + ' authorOf ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'is author of'
                     }
-                }));
+                });
             } else if (msg.type === 'repost_of') {
-                let repostExists = nodes[msg.source] !== undefined;
-                let originalPostExists = nodes[msg.target] !== undefined;
+                let repostExists = nodes[msg.source] !== undefined || tempNodes[msg.source] !== undefined;
+                let originalPostExists = nodes[msg.target] !== undefined || tempNodes[msg.target] !== undefined;
 
-                if ((!repostExists || !originalPostExists) && Object.keys(nodes).length >= maxNodes) {
+                if ((!repostExists || !originalPostExists) && (Object.keys(nodes).length + Object.keys(tempNodes).length) >= maxNodes) {
                     return;
                 }
 
                 if (create) {
                     if (!repostExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.source]: {
                                 id: msg.source, group: 1
                             }
-                        }));
+                        });
                     }
     
                     if (!originalPostExists) {
-                        setNodes(previous => ({
-                            ...previous,
+                        setNodesDecorator({
                             [msg.target]: {
                                 id: msg.target, group: 1
                             }
-                        }));
+                        });
                     }
                 }
 
-                setLinks(previous => ({
-                    ...previous,
+                setLinksDecorator({
                     [msg.source + ' isRepostOf ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'is repost of'
                     }
-                }));
+                });
             }
         }
 
@@ -493,7 +550,7 @@ function App({socket}) {
             socket.off(eventName, onInterest);
 
         };
-    }, [nodes, links, interestID, socket]);
+    }, [nodes, links, tempNodes, interestID, socket, setNodesDecorator, setLinksDecorator]);
 
     return (
         <>
@@ -535,7 +592,7 @@ function App({socket}) {
                     )
                 })}
             </div>
-            {selectedNode && 
+            {selectedDescActive && 
             <div className='nodeInfo'>
                 <div className='infoTitle'>
                     Info 
@@ -589,7 +646,7 @@ function App({socket}) {
                 onLinkHover={handleLinkHover}
 
                 forceEngine='d3'
-                d3AlphaDecay={highlightLinks.size || highlightNodes.size || selectedNode ? 1 : 0}
+                d3AlphaDecay={highlighted ? 1 : 0}
                 d3VelocityDecay={0.75}
             />
         </>
