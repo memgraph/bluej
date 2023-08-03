@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { TextField, InputAdornment, Button } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 
 function App({socket}) {
     const [nodes, setNodes] = useState({});
@@ -528,31 +528,61 @@ function App({socket}) {
             socket.off('merge', onMerge);
             socket.off('delete', onDelete);
             socket.off(eventName, onInterest);
-
         };
     }, [nodes, links, highlighted, interestID, socket, clear]);
 
     return (
         <>
-            <form className='searchbarContainer' onSubmit={handleSearchSubmit}>
-                <FontAwesomeIcon className='searchIcon' icon={faMagnifyingGlass}/>
-                <input className='searchbar' type='text' value={searchString} onChange={(e) => setSearchString(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)} placeholder='Subscribe with user ID...'/>
-                <button className='searchClearButton' onClick={(e) => {
-                    e.preventDefault();
-                    if (searchString) {
+            <div className='searchbarContainer'>
+                <TextField 
+                    variant='outlined'
+                    color='warning'
+                    size='small'
+
+                    label='Subscribe with user ID'
+                    placeholder='did:plc:123qwerty'
+                    value={searchString}
+
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position='start'>
+                                <SearchIcon />
+                            </InputAdornment>
+                        ),
+                    }}
+
+                    sx={{
+                        width: '600px',
+                        fontSize: '17.5px'
+                    }}
+
+                    onChange={(e) => setSearchString(e.target.value)} 
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)}
+                />
+                <Button 
+                    variant='contained'
+                    color='warning'
+
+                    onClick={(e) => {
+                        e.preventDefault();
                         setSearchString('');
-                    }
-                    if (interestID) {
                         setInterestID('');
                         setSearchSubmitted(false);
                         socket.emit('interest', '');
-                    }
-                    clear();
-                }}>
+                        clear();
+                    }}
+                >
                     Clear
-                </button>
-                <input className='searchSubmitButton' type='submit' value='Subscribe'/>
-            </form>
+                </Button>
+                <Button
+                    variant='contained'
+                    color='secondary'
+
+                    onClick={handleSearchSubmit}
+                >
+                    Subscribe
+                </Button>
+            </div>
             {searchSubmitted && Object.keys(nodes).length === 0 && 
             <div className='noNodesWarning'>
                 Zero nodes found for subscribed user ID.
