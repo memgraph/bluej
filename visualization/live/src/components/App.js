@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
-import { TextField, InputAdornment, Button, Divider } from '@mui/material';
+import { TextField, InputAdornment, Button, Divider, Link } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SquareIcon from '@mui/icons-material/Square';
 
@@ -608,16 +608,93 @@ function App({socket}) {
             {selectedDescActive && selectedNode &&
             <div className='nodeInfo'>
                 <div className='infoTitle'>
-                    Info 
+                    {
+                        selectedNode.id.startsWith('did') ? 
+                            "Person" : "Post"
+                    }
                     <div className='exit' onClick={clearSelected}/>
                 </div>
                 <Divider/>
                 {
                     selectedNode.id.startsWith('did') ? 
-                        <div> Node type: Person <br/> ID: {selectedNode.id} </div> : 
+                        <div className='nodeInfoBody'> 
+                            <div className='nodeInfoList'>
+                                ID: {selectedNode.id}
+                            </div>
+                            <Divider/>
+                            <Link 
+                                href={`https://bsky.app/profile/${selectedNode.id}`} 
+                                underline='hover'
+                                target='_blank'
+                                color='secondary'
+                                sx={{
+                                    alignSelf: 'center',
+                                    marginTop: '10px'
+                                }}
+                            >
+                                Visit profile
+                            </Link>
+                        </div> : 
                     selectedNode.text ? 
-                        <div> Node type: Post <br/> ID: {selectedNode.id} <br/> Text: {selectedNode.text} </div> :
-                    <div> Node type: Post <br/> ID: {selectedNode.id} </div>
+                        <div className='nodeInfoBody'> 
+                            <div className='nodeInfoList'>
+                                ID: {selectedNode.id}
+                                <br/>
+                                Text: {selectedNode.text}
+                            </div>
+                            <Divider/>
+                            <Link 
+                                href={`https://bsky.app/profile/${selectedNode.id.split('//')[1].split('/')[0]}/post/${selectedNode.id.split('//')[1].split('/')[2]}`} 
+                                underline='hover'
+                                target='_blank'
+                                color='secondary'
+                                sx={{
+                                    alignSelf: 'center',
+                                    marginTop: '10px'
+                                }}
+                            >
+                                Visit post
+                            </Link>
+                        </div> :
+                    selectedNode.repostUri ? 
+                        <div className='nodeInfoBody'> 
+                            <div className='nodeInfoList'>
+                                ID: {selectedNode.id}
+                                <br/>
+                                Original post ID: {selectedNode.repostUri}
+                            </div>
+                            <Divider/>
+                            <Link 
+                                href={`https://bsky.app/profile/${selectedNode.repostUri.split('//')[1].split('/')[0]}/post/${selectedNode.repostUri.split('//')[1].split('/')[2]}`} 
+                                underline='hover'
+                                target='_blank'
+                                color='secondary'
+                                sx={{
+                                    alignSelf: 'center',
+                                    marginTop: '10px'
+                                }}
+                            >
+                                Visit original post
+                            </Link>
+                        </div> :
+                    <div className='nodeInfoBody'> 
+                        <div className='nodeInfoList'>
+                            ID: {selectedNode.id}
+                        </div>
+                        <Divider/>
+                        <Link 
+                            href={`https://bsky.app/profile/${selectedNode.id.split('//')[1].split('/')[0]}/post/${selectedNode.id.split('//')[1].split('/')[2]}`} 
+                            underline='hover'
+                            target='_blank'
+                            color='secondary'
+                            sx={{
+                                alignSelf: 'center',
+                                marginTop: '10px'
+                            }}
+                        >
+                            Visit post
+                        </Link>
+                    </div>
                 }
             </div>}
             <ForceGraph3D
