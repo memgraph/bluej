@@ -19,6 +19,7 @@ Or follow the instructions for your platform on https://memgraph.com/docs/memgra
 Indexes are critical for performance, for each event that comes in the database needs to match user id's and post id's, and without indexes those take a looonnggg time (for a computer anyway), so once you have memgraph running, create indexes using this query:
 ```
 CREATE INDEX ON :Person(did)
+CREATE INDEX ON :Person(handle)
 CREATE INDEX ON :Post(uri)
 CREATE INDEX ON :Person
 CREATE INDEX ON :Post
