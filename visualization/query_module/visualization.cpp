@@ -1,8 +1,7 @@
 #include <mgp.hpp>
 #include <curl/curl.h>
 
-const char* base_url = "http://localhost:8080/testing";
-// const char* base_url = "http://www.example.com";
+const char* base_url = "http://192.168.0.18:8080/status";
 
 void test_func(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
@@ -40,7 +39,7 @@ void test_func(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_
   if (response_code == CURLE_OK) {
     result.SetValue(num);
   } else {
-    result.SetValue(err);
+    result.SetErrorMessage(curl_easy_strerror(response_code));
   }
 
   curl_easy_cleanup(curl);
