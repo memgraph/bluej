@@ -1,7 +1,7 @@
 #include <mgp.hpp>
 #include <curl/curl.h>
 
-const char* base_url = "http://192.168.0.18:8080/status";
+const char* base_url = "http://192.168.0.18:8080/create";
 
 void test_func(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
@@ -23,16 +23,15 @@ void test_func(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_
     return;
   }
 
-  // struct curl_slist *headers = NULL;
-  // headers = curl_slist_append(headers, "Content-Type: application/json");
-  // headers = curl_slist_append(headers, "charset: utf-8");
+  struct curl_slist *headers = NULL;
+  headers = curl_slist_append(headers, "Content-Type: application/json");
+  headers = curl_slist_append(headers, "charset: utf-8");
 
-  // const char* json_data = "{ \"type\" : \"post\" , \"uri\" : \"uriToPost\" , \"cid\" : \"postCID\" , \"author\" : \"DJ\" , \"text\" : \"Lorem ipsum.\" , \"createdAt\" : \"07.08.2023\" }";
+  const char* json_data = "{ \"type\" : \"post\" , \"uri\" : \"uriToPost\" , \"cid\" : \"postCID\" , \"author\" : \"DJ\" , \"text\" : \"Lorem ipsum.\" , \"createdAt\" : \"07.08.2023\" }";
 
   curl_easy_setopt(curl, CURLOPT_URL, base_url);
-  // curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-  // curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data);
-  // curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strlen(json_data));
+  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data);
 
   response_code = curl_easy_perform(curl);
 
