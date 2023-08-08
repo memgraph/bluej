@@ -74,7 +74,7 @@ void create_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
   }
 
   for (const auto& [key, value] : node.Properties()) {
-    if (value.Type() == mgp::Type::String) {
+    if (value.Type() == mgp::Type::String && key != "text") {
       json_data += ("\"" + std::string(key) + "\" : \"" + trim(std::string(value.ValueString())) + "\" , ");
     }
   }

@@ -42,21 +42,21 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           })
 
           const author = result?.records[0]?.get(0);
-          fetch(apiAddress + '/delete', {
-            method: "POST",
-            body: JSON.stringify({
-              type: 'post', 
-              uri: post.uri,
-              author
-            }),
-            headers: {
-              "Content-type": "application/json; charset=UTF-8"
-            }
-          }).catch((err) => {
-            if (verbose) {
-              console.log(err)
-            }
-          })
+          // fetch(apiAddress + '/delete', {
+          //   method: "POST",
+          //   body: JSON.stringify({
+          //     type: 'post', 
+          //     uri: post.uri,
+          //     author
+          //   }),
+          //   headers: {
+          //     "Content-type": "application/json; charset=UTF-8"
+          //   }
+          // }).catch((err) => {
+          //   if (verbose) {
+          //     console.log(err)
+          //   }
+          // })
 
         } catch (err) {
           if (outputError) console.error('[ERROR POST DELETE]:', err)
@@ -74,40 +74,40 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           createdAt: post.record.createdAt
         })
 
-        fetch(apiAddress + '/create', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'post', 
-            uri: post.uri, 
-            cid: post.cid, 
-            author: post.author, 
-            text: post.record.text, 
-            createdAt: post.record.createdAt
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
-        })
+        // fetch(apiAddress + '/create', {
+        //   method: "POST",
+        //   body: JSON.stringify({
+        //     type: 'post', 
+        //     uri: post.uri, 
+        //     cid: post.cid, 
+        //     author: post.author, 
+        //     text: post.record.text, 
+        //     createdAt: post.record.createdAt
+        //   }),
+        //   headers: {
+        //     "Content-type": "application/json; charset=UTF-8"
+        //   }
+        // }).catch((err) => {
+        //   if (verbose) {
+        //     console.log(err)
+        //   }
+        // })
 
-        fetch(apiAddress + '/merge', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'author_of', 
-            source: post.author, 
-            target: post.uri
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
-        })
+        // fetch(apiAddress + '/merge', {
+        //   method: "POST",
+        //   body: JSON.stringify({
+        //     type: 'author_of', 
+        //     source: post.author, 
+        //     target: post.uri
+        //   }),
+        //   headers: {
+        //     "Content-type": "application/json; charset=UTF-8"
+        //   }
+        // }).catch((err) => {
+        //   if (verbose) {
+        //     console.log(err)
+        //   }
+        // })
 
         const replyRoot = post.record?.reply?.root ? post.record.reply.root.uri : null
         const replyParent = post.record?.reply?.parent ? post.record.reply.parent.uri : null
@@ -117,22 +117,22 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             rootUri: replyRoot
           })
 
-          fetch(apiAddress + '/merge', {
-            method: "POST",
-            body: JSON.stringify({
-              type: 'root', 
-              source: post.uri, 
-              target: replyRoot,
-              author: post.author
-            }),
-            headers: {
-              "Content-type": "application/json; charset=UTF-8"
-            }
-          }).catch((err) => {
-            if (verbose) {
-              console.log(err)
-            }
-          })
+          // fetch(apiAddress + '/merge', {
+          //   method: "POST",
+          //   body: JSON.stringify({
+          //     type: 'root', 
+          //     source: post.uri, 
+          //     target: replyRoot,
+          //     author: post.author
+          //   }),
+          //   headers: {
+          //     "Content-type": "application/json; charset=UTF-8"
+          //   }
+          // }).catch((err) => {
+          //   if (verbose) {
+          //     console.log(err)
+          //   }
+          // })
         }
         if (replyParent) {
           await this.executeQuery("MERGE (post1:Post {uri: $uri}) MERGE (post2:Post {uri: $parentUri}) MERGE (post1)-[:PARENT {weight: 0}]->(post2)", {
@@ -140,22 +140,22 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             parentUri: replyParent
           })
 
-          fetch(apiAddress + '/merge', {
-            method: "POST",
-            body: JSON.stringify({
-              type: 'parent', 
-              source: post.uri, 
-              target: replyParent,
-              author: post.author
-            }),
-            headers: {
-              "Content-type": "application/json; charset=UTF-8"
-            }
-          }).catch((err) => {
-            if (verbose) {
-              console.log(err)
-            }
-          })
+          // fetch(apiAddress + '/merge', {
+          //   method: "POST",
+          //   body: JSON.stringify({
+          //     type: 'parent', 
+          //     source: post.uri, 
+          //     target: replyParent,
+          //     author: post.author
+          //   }),
+          //   headers: {
+          //     "Content-type": "application/json; charset=UTF-8"
+          //   }
+          // }).catch((err) => {
+          //   if (verbose) {
+          //     console.log(err)
+          //   }
+          // })
         }
       }
     }
@@ -178,21 +178,21 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           subjectDid: follow.record.subject
         })
 
-        fetch(apiAddress + '/merge', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'follow', 
-            source: follow.author, 
-            target: follow.record.subject
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
-        })
+        // fetch(apiAddress + '/merge', {
+        //   method: "POST",
+        //   body: JSON.stringify({
+        //     type: 'follow', 
+        //     source: follow.author, 
+        //     target: follow.record.subject
+        //   }),
+        //   headers: {
+        //     "Content-type": "application/json; charset=UTF-8"
+        //   }
+        // }).catch((err) => {
+        //   if (verbose) {
+        //     console.log(err)
+        //   }
+        // })
       }
     }
     if (ops.likes.deletes.length > 0) {
@@ -209,21 +209,21 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           postUri: like.record.subject.uri
         })
 
-        fetch(apiAddress + '/merge', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'like', 
-            source: like.author, 
-            target: like.record.subject.uri
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
-        })
+        // fetch(apiAddress + '/merge', {
+        //   method: "POST",
+        //   body: JSON.stringify({
+        //     type: 'like', 
+        //     source: like.author, 
+        //     target: like.record.subject.uri
+        //   }),
+        //   headers: {
+        //     "Content-type": "application/json; charset=UTF-8"
+        //   }
+        // }).catch((err) => {
+        //   if (verbose) {
+        //     console.log(err)
+        //   }
+        // })
       }
     }
     if (ops.reposts.deletes.length > 0) {
@@ -234,21 +234,21 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         })
 
         const author = result?.records[0]?.get(0);
-        fetch(apiAddress + '/delete', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'repost', 
-            uri: repost.uri,
-            author
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
-        })
+        // fetch(apiAddress + '/delete', {
+        //   method: "POST",
+        //   body: JSON.stringify({
+        //     type: 'repost', 
+        //     uri: repost.uri,
+        //     author
+        //   }),
+        //   headers: {
+        //     "Content-type": "application/json; charset=UTF-8"
+        //   }
+        // }).catch((err) => {
+        //   if (verbose) {
+        //     console.log(err)
+        //   }
+        // })
       }
     }
     if (ops.reposts.creates.length > 0) {
@@ -262,62 +262,62 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           createdAt: repost.record.createdAt
         })
 
-        fetch(apiAddress + '/create', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'post', 
-            uri: repost.uri, 
-            cid: repost.cid, 
-            author: repost.author, 
-            repostUri: repost.record.subject.uri, 
-            createdAt: repost.record.createdAt
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
-        })
+        // fetch(apiAddress + '/create', {
+        //   method: "POST",
+        //   body: JSON.stringify({
+        //     type: 'post', 
+        //     uri: repost.uri, 
+        //     cid: repost.cid, 
+        //     author: repost.author, 
+        //     repostUri: repost.record.subject.uri, 
+        //     createdAt: repost.record.createdAt
+        //   }),
+        //   headers: {
+        //     "Content-type": "application/json; charset=UTF-8"
+        //   }
+        // }).catch((err) => {
+        //   if (verbose) {
+        //     console.log(err)
+        //   }
+        // })
         
-        fetch(apiAddress + '/merge', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'author_of', 
-            source: repost.author, 
-            target: repost.uri
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
-        })
+        // fetch(apiAddress + '/merge', {
+        //   method: "POST",
+        //   body: JSON.stringify({
+        //     type: 'author_of', 
+        //     source: repost.author, 
+        //     target: repost.uri
+        //   }),
+        //   headers: {
+        //     "Content-type": "application/json; charset=UTF-8"
+        //   }
+        // }).catch((err) => {
+        //   if (verbose) {
+        //     console.log(err)
+        //   }
+        // })
 
         await this.executeQuery("MERGE (repost:Post {uri: $uri}) MERGE (original:Post {uri: $originalUri}) MERGE (repost)-[:REPOST_OF {weight: 0}]->(original)", {
           uri: repost.uri,
           originalUri: repost.record.subject.uri
         })
 
-        fetch(apiAddress + '/merge', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'repost_of', 
-            source: repost.uri, 
-            target: repost.record.subject.uri,
-            author: repost.author
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
-        })
+        // fetch(apiAddress + '/merge', {
+        //   method: "POST",
+        //   body: JSON.stringify({
+        //     type: 'repost_of', 
+        //     source: repost.uri, 
+        //     target: repost.record.subject.uri,
+        //     author: repost.author
+        //   }),
+        //   headers: {
+        //     "Content-type": "application/json; charset=UTF-8"
+        //   }
+        // }).catch((err) => {
+        //   if (verbose) {
+        //     console.log(err)
+        //   }
+        // })
       }
     }
   }
