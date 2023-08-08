@@ -2,19 +2,9 @@
 #include <curl/curl.h>
 #include <string>
 #include <string_view>
+#include "json.hpp"
 
 const std::string base_url = "http://192.168.0.18:8080";
-
-std::string trim(const std::string& str) {
-    size_t start = str.find_first_not_of(" \t\n\r");
-    size_t end = str.find_last_not_of(" \t\n\r");
-
-    if (start == std::string::npos) {
-        return "";
-    }
-
-    return str.substr(start, end - start + 1);
-}
 
 void test_func(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
@@ -64,23 +54,22 @@ void create_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
   auto node = arguments[0].ValueNode();
 
   auto result = mgp::Result(res);
-  std::string json_data = "";
+  nlohmann::json json;
 
   std::string_view label = node.Labels()[0];
   if (label == "Person") {
-    json_data += "{ \"type\": \"person\" , ";
+    json["type"] = "person";
   } else if (label == "Post") {
-    json_data += "{ \"type\": \"post\" , ";
+    json["type"] = "post";
   }
 
   for (const auto& [key, value] : node.Properties()) {
-    if (value.Type() == mgp::Type::String && key != "text") {
-      json_data += ("\"" + std::string(key) + "\" : \"" + trim(std::string(value.ValueString())) + "\" , ");
+    if (value.Type() == mgp::Type::String) {
+      json[std::string(key)] = std::string(value.ValueString());
     }
   }
 
-  json_data = json_data.substr(0, json_data.length() - 3);
-  json_data += " }";
+  const std::string json_data = json.dump(); 
 
   CURL *curl;
   CURLcode response_code;

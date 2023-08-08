@@ -31,6 +31,7 @@ Now run the following two lines:
 
 ```
     docker cp ./CMakeLists.txt <containerID>:/mage/cpp/visualization
+    docker cp ./json.hpp <containerID>:/mage/cpp/visualization
     docker cp ./visualization.cpp <containerID>:/mage/cpp/visualization
 ```
 
