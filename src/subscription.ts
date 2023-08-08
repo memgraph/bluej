@@ -265,7 +265,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         fetch(apiAddress + '/create', {
           method: "POST",
           body: JSON.stringify({
-            type: 'repost', 
+            type: 'post', 
             uri: repost.uri, 
             cid: repost.cid, 
             author: repost.author, 

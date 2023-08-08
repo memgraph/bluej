@@ -25,6 +25,18 @@ CREATE INDEX ON :Person
 CREATE INDEX ON :Post
 ```
 
+### Triggers
+
+In order for the visualization to work, Memgraph needs to have certain triggers stored. You can create the necessary triggers using the following query:
+
+```
+DROP TRIGGER nodeCreate;
+
+CREATE TRIGGER nodeCreate ON () CREATE AFTER COMMIT EXECUTE
+UNWIND createdVertices AS createdNode
+RETURN visualization.create_node(createdNode);
+```
+
 ## Running
 
 Once done, follow these steps to run:

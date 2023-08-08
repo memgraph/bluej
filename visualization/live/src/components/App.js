@@ -267,14 +267,7 @@ function App({socket}) {
                 setNodes(previous => ({
                     ...previous,
                     [msg.uri]: {
-                        id: msg.uri, group: 1, author: msg.author, text: msg.text
-                    }
-                }));
-            } else if (msg.type === 'repost') {
-                setNodes(previous => ({
-                    ...previous,
-                    [msg.uri]: {
-                        id: msg.uri, group: 1, author: msg.author, repostUri: msg.repostUri
+                        id: msg.uri, group: 1, author: msg?.author, text: msg?.text, repostUri: msg?.repostUri
                     }
                 }));
             }
