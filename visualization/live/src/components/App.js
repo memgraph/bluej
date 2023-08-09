@@ -4,6 +4,8 @@ import '../styles/App.css';
 import { TextField, InputAdornment, Button, Divider, Link } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SquareIcon from '@mui/icons-material/Square';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';                                 
 
 function App({socket}) {
     const [nodes, setNodes] = useState({});
@@ -76,7 +78,7 @@ function App({socket}) {
                 setHighlighted(true);
             }
         }
-    }, [highlighted, highlightLinks, hoverNode, selectedNode]);
+    }, [highlighted, highlightLinks.size, hoverNode, selectedNode]);
 
     const clear = useCallback(() => {
         setNodes({});
@@ -216,10 +218,6 @@ function App({socket}) {
 
     useEffect(() => {
         const onDelete = msg => {
-            if (highlighted) {
-                return;
-            }
-
             let nodeKey = msg?.did || msg.uri;
             let nodeExists = nodes[nodeKey] !== undefined;
 
@@ -242,6 +240,16 @@ function App({socket}) {
                         
                         if (firstNode.startsWith(nodeKey) || secondNode.startsWith(nodeKey)) {
                             delete cpy[key];
+
+                            if (highlightLinks.has(key)) {
+                                highlightLinks.delete(key);
+                                setHighlightLinks(highlightLinks);
+                            }
+
+                            if (selectedLinks.has(key)) {
+                                selectedLinks.delete(key);
+                                setSelectedLinks(selectedLinks);
+                            }
                         }
                     });
 
@@ -249,6 +257,49 @@ function App({socket}) {
                         ...cpy
                     };
                 });
+
+                let node = nodes[nodeKey];
+                let wasCenter = false;
+
+                if (highlightNodes.has(node)) {
+                    highlightNodes.delete(node);
+                    setHighlightNodes(highlightNodes);
+                }
+
+                if (selectedNodes.has(node)) {
+                    selectedNodes.delete(node);
+                    setSelectedNodes(selectedNodes);
+                }
+
+                if (hoverNode === node) {
+                    setHoverNode(null);
+                    setHighlightNodes(new Set());
+                    setHighlightLinks(new Set());
+
+                    wasCenter = true;
+                }
+
+                if (selectedNode === node) {
+                    setSelectedNode(null);
+                    setSelectedNodes(new Set());
+                    setSelectedLinks(new Set());
+            
+                    clearTimeout(currTimeout);
+                    setCurrTimeout(null);
+                    setSelectedDescActive(false);
+
+                    wasCenter = true;
+                }
+
+                setNodes(previous => {
+                    return {
+                        ...previous
+                    };
+                });
+
+                if (wasCenter) {
+                    toast.warn("The node you were focused on has been deleted.");
+                }
             }
         }
 
@@ -524,10 +575,22 @@ function App({socket}) {
             socket.off('delete', onDelete);
             socket.off(eventName, onInterest);
         };
-    }, [nodes, links, highlighted, interestID, socket, clear]);
+    }, [nodes, links, hoverNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestID, socket, clear]);
 
     return (
         <>
+            <ToastContainer 
+                position='top-left'
+                autoClose={7500}
+                hideProgressBar={false}
+                newestOnTop={true}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme='light'
+            />
             <div className='searchbarContainer'>
                 <TextField 
                     variant='outlined'
