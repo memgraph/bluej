@@ -45,7 +45,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           // fetch(apiAddress + '/delete', {
           //   method: "POST",
           //   body: JSON.stringify({
-          //     type: 'post', 
           //     uri: post.uri,
           //     author
           //   }),
@@ -237,7 +236,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         // fetch(apiAddress + '/delete', {
         //   method: "POST",
         //   body: JSON.stringify({
-        //     type: 'repost', 
         //     uri: repost.uri,
         //     author
         //   }),

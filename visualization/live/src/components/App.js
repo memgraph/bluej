@@ -220,13 +220,13 @@ function App({socket}) {
                 return;
             }
 
-            let nodeKey = msg?.uri || msg.did;
+            let nodeKey = msg?.did || msg.uri;
             let nodeExists = nodes[nodeKey] !== undefined;
 
             if (nodeExists) {
                 setNodes(previous => {
                     let cpy = {...previous};
-                    delete cpy[nodes[nodeKey]];
+                    delete cpy[nodeKey];
 
                     return {
                         ...cpy

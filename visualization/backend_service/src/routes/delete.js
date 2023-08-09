@@ -5,17 +5,12 @@ const { verbose } = require('../config');
 const router = express.Router();
 
 router.post('/', (req, res) => {
-    let author;
-    if (req.body?.did) {
-        author = req.body.did;
-    } else {
-        author = req.body?.author;
-    }
+    const author = req.body?.did || req.body?.author;
 
     Object.entries(sockets).forEach(([socketID, socket]) => {
         const interests = clientInterests[socketID];
 
-        if (!interests || interests.includes(author)) {
+        if (!interests || interests.includes(author) || !author) {
             socket.emit('delete', req.body);
         }
     });
