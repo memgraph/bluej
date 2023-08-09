@@ -220,12 +220,13 @@ function App({socket}) {
                 return;
             }
 
-            let nodeExists = nodes[msg.uri] !== undefined;
+            let nodeKey = msg?.uri || msg.did;
+            let nodeExists = nodes[nodeKey] !== undefined;
 
             if (nodeExists) {
                 setNodes(previous => {
                     let cpy = {...previous};
-                    delete cpy[nodes[msg.uri]];
+                    delete cpy[nodes[nodeKey]];
 
                     return {
                         ...cpy
@@ -239,7 +240,7 @@ function App({socket}) {
                         let firstNode = splitRelationship[0];
                         let secondNode = splitRelationship[2];
                         
-                        if (firstNode.startsWith(msg.uri) || secondNode.startsWith(msg.uri)) {
+                        if (firstNode.startsWith(nodeKey) || secondNode.startsWith(nodeKey)) {
                             delete cpy[key];
                         }
                     });
@@ -461,7 +462,7 @@ function App({socket}) {
                         setNodes(previous => ({
                             ...previous,
                             [msg.source]: {
-                                id: msg.source, group: 1
+                                id: msg.source, group: 1, repostUri: msg.target
                             }
                         }));
                     }

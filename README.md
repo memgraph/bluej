@@ -27,14 +27,19 @@ CREATE INDEX ON :Post
 
 ### Triggers
 
-In order for the visualization to work, Memgraph needs to have certain triggers stored. You can create the necessary triggers using the following query:
+In order for the visualization to work, Memgraph needs to have certain triggers stored. You can create the necessary triggers using the following queries (each probably needs to be done separately):
 
 ```
 DROP TRIGGER nodeCreate;
+DROP TRIGGER relationshipCreate;
 
 CREATE TRIGGER nodeCreate ON () CREATE AFTER COMMIT EXECUTE
 UNWIND createdVertices AS createdNode
 RETURN visualization.create_node(createdNode);
+
+CREATE TRIGGER relationshipCreate ON --> CREATE AFTER COMMIT EXECUTE
+UNWIND createdEdges AS createdRelationship
+RETURN visualization.create_relationship(createdRelationship);
 ```
 
 ## Running

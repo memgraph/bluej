@@ -5,7 +5,12 @@ const { verbose } = require('../config');
 const router = express.Router();
 
 router.post('/', (req, res) => {
-    const author = req.body?.author || req.body.source;
+    let author;
+    if (req.body.source.startsWith('did')) {
+        author = req.body.source;
+    } else {
+        author = req.body?.author;
+    }
 
     Object.entries(sockets).forEach(([socketID, socket]) => {
         const interests = clientInterests[socketID];
