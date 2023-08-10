@@ -6,6 +6,7 @@
 
 const char *argumentNode = "node";
 const char *argumentRelationship = "relationship";
+const char *argumentAction = "action";
 
 const std::string base_url = "http://192.168.0.18:8080";
 
@@ -43,7 +44,7 @@ void create_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
       return;
     }
 
-    std::string url = base_url + "/create";
+    const std::string url = base_url + "/create";
 
     struct curl_slist *headers = NULL;
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -68,13 +69,14 @@ void create_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
   }
 }
 
-void create_relationship(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+void handle_relationship(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
   try {
     auto relationship = arguments[0].ValueRelationship();
+    const std::string action = std::string(arguments[1].ValueString());
     nlohmann::json json;
 
     std::string_view type = relationship.Type();
@@ -134,7 +136,7 @@ void create_relationship(mgp_list *args, mgp_func_context *ctx, mgp_func_result 
       return;
     }
 
-    std::string url = base_url + "/merge";
+    const std::string url = base_url + "/" + action;
 
     struct curl_slist *headers = NULL;
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -192,7 +194,7 @@ void delete_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
       return;
     }
 
-    std::string url = base_url + "/delete";
+    const std::string url = base_url + "/delete";
 
     struct curl_slist *headers = NULL;
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -225,8 +227,9 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
       mgp::Parameter(argumentNode, mgp::Type::Node)
     }, module, memory);
 
-    mgp::AddFunction(create_relationship, "create_relationship", {
-      mgp::Parameter(argumentRelationship, mgp::Type::Relationship)
+    mgp::AddFunction(handle_relationship, "handle_relationship", {
+      mgp::Parameter(argumentRelationship, mgp::Type::Relationship),
+      mgp::Parameter(argumentAction, mgp::Type::String)
     }, module, memory);
 
     mgp::AddFunction(delete_node, "delete_node", {

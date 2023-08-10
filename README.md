@@ -33,6 +33,7 @@ In order for the visualization to work, Memgraph needs to have certain triggers 
 DROP TRIGGER nodeCreate;
 DROP TRIGGER relationshipCreate;
 DROP TRIGGER nodeDelete;
+DROP TRIGGER relationshipDelete;
 
 CREATE TRIGGER nodeCreate ON () CREATE AFTER COMMIT EXECUTE
 UNWIND createdVertices AS createdNode
@@ -40,11 +41,15 @@ RETURN visualization.create_node(createdNode);
 
 CREATE TRIGGER relationshipCreate ON --> CREATE AFTER COMMIT EXECUTE
 UNWIND createdEdges AS createdRelationship
-RETURN visualization.create_relationship(createdRelationship);
+RETURN visualization.handle_relationship(createdRelationship, "merge");
 
 CREATE TRIGGER nodeDelete ON () DELETE AFTER COMMIT EXECUTE
 UNWIND deletedVertices AS deletedNode
 RETURN visualization.delete_node(deletedNode);
+
+CREATE TRIGGER relationshipDelete ON --> DELETE AFTER COMMIT EXECUTE
+UNWIND deletedEdges AS deletedRelationship
+RETURN visualization.handle_relationship(deletedRelationship, "detach");
 ```
 
 ## Running

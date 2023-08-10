@@ -78,7 +78,7 @@ function App({socket}) {
                 setHighlighted(true);
             }
         }
-    }, [highlighted, highlightLinks.size, hoverNode, selectedNode]);
+    }, [highlighted, highlightLinks, hoverNode, selectedNode]);
 
     const clear = useCallback(() => {
         setNodes({});
@@ -102,8 +102,8 @@ function App({socket}) {
     }, [currTimeout]);
 
     const updateSelected = useCallback(() => {
-        setSelectedNodes(selectedNodes);
-        setSelectedLinks(selectedLinks);
+        setSelectedNodes(new Set(selectedNodes));
+        setSelectedLinks(new Set(selectedLinks));
 
         setNodes(previous => {
             return {
@@ -157,8 +157,8 @@ function App({socket}) {
     }, [fgRef, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
 
     const updateHighlight = () => {
-        setHighlightNodes(highlightNodes);
-        setHighlightLinks(highlightLinks);
+        setHighlightNodes(new Set(highlightNodes));
+        setHighlightLinks(new Set(highlightLinks));
 
         setNodes(previous => {
             return {
@@ -239,16 +239,40 @@ function App({socket}) {
                         let secondNode = splitRelationship[2];
                         
                         if (firstNode.startsWith(nodeKey) || secondNode.startsWith(nodeKey)) {
+                            let link = links[key];
+                            let source_node = nodes[firstNode];
+                            let target_node = nodes[secondNode];
+                            
                             delete cpy[key];
 
-                            if (highlightLinks.has(key)) {
-                                highlightLinks.delete(key);
-                                setHighlightLinks(highlightLinks);
+                            if (highlightLinks.has(link)) {
+                                highlightLinks.delete(link);
+                                setHighlightLinks(new Set(highlightLinks));
+
+                                if (source_node !== hoverNode) {
+                                    highlightNodes.delete(source_node);
+                                    setHighlightNodes(new Set(highlightNodes));
+                                }
+                
+                                if (target_node !== hoverNode) {
+                                    highlightNodes.delete(target_node);
+                                    setHighlightNodes(new Set(highlightNodes));
+                                }
                             }
 
-                            if (selectedLinks.has(key)) {
-                                selectedLinks.delete(key);
-                                setSelectedLinks(selectedLinks);
+                            if (selectedLinks.has(link)) {
+                                selectedLinks.delete(link);
+                                setSelectedLinks(new Set(selectedLinks));
+
+                                if (source_node !== selectedNode) {
+                                    selectedNodes.delete(source_node);
+                                    setSelectedNodes(new Set(selectedNodes));
+                                }
+                                
+                                if (target_node !== selectedNode) {
+                                    selectedNodes.delete(target_node);
+                                    setSelectedNodes(new Set(selectedNodes));
+                                }
                             }
                         }
                     });
@@ -263,12 +287,12 @@ function App({socket}) {
 
                 if (highlightNodes.has(node)) {
                     highlightNodes.delete(node);
-                    setHighlightNodes(highlightNodes);
+                    setHighlightNodes(new Set(highlightNodes));
                 }
 
                 if (selectedNodes.has(node)) {
                     selectedNodes.delete(node);
-                    setSelectedNodes(selectedNodes);
+                    setSelectedNodes(new Set(selectedNodes));
                 }
 
                 if (hoverNode === node) {
@@ -536,6 +560,80 @@ function App({socket}) {
                 }));
             }
         }
+
+        const onDetach = msg => {
+            let key = '';
+
+            switch (msg.type) {
+                case 'root':
+                    key = msg.source + ' hasRoot ' + msg.target;
+                    break;
+                case 'parent':
+                    key = msg.source + ' hasParent ' + msg.target;
+                    break;
+                case 'follow':
+                    key = msg.source + ' followed ' + msg.target;
+                    break;
+                case 'like':
+                    key = msg.source + ' liked ' + msg.target;
+                    break;
+                case 'author_of':
+                    key = msg.source + ' authorOf ' + msg.target;
+                    break;
+                case 'repost_of':
+                    key = msg.source + ' isRepostOf ' + msg.target;
+                    break;
+                default:
+                    return;
+            }
+
+            let link = links[key];
+            let source_node = nodes[msg.source];
+            let target_node = nodes[msg.target];
+
+            if (!link) {
+                return;
+            }
+
+            if (highlightLinks.has(link)) {
+                highlightLinks.delete(link);
+                setHighlightLinks(new Set(highlightLinks));
+
+                if (source_node !== hoverNode) {
+                    highlightNodes.delete(source_node);
+                    setHighlightNodes(new Set(highlightNodes));
+                }
+
+                if (target_node !== hoverNode) {
+                    highlightNodes.delete(target_node);
+                    setHighlightNodes(new Set(highlightNodes));
+                }
+            }
+
+            if (selectedLinks.has(link)) {
+                selectedLinks.delete(link);
+                setSelectedLinks(new Set(selectedLinks));
+
+                if (source_node !== selectedNode) {
+                    selectedNodes.delete(source_node);
+                    setSelectedNodes(new Set(selectedNodes));
+                }
+                
+                if (target_node !== selectedNode) {
+                    selectedNodes.delete(target_node);
+                    setSelectedNodes(new Set(selectedNodes));
+                }
+            }
+
+            setLinks(previous => {
+                let cpy = {...previous};
+                delete cpy[key];
+
+                return {
+                    ...cpy
+                };
+            });
+        }
         
         const onInterest = msg => {
             clear();
@@ -567,12 +665,14 @@ function App({socket}) {
         socket.on('create', onCreate);
         socket.on('merge', onMerge);
         socket.on('delete', onDelete);
+        socket.on('detach', onDetach);
         socket.on(eventName, onInterest);
 
         return () => {
             socket.off('create', onCreate);
             socket.off('merge', onMerge);
             socket.off('delete', onDelete);
+            socket.off('detach', onDetach);
             socket.off(eventName, onInterest);
         };
     }, [nodes, links, hoverNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestID, socket, clear]);

@@ -134,10 +134,12 @@ app.use(express.json());
 const createRouter = require('./routes/create');
 const deleteRouter = require('./routes/delete');
 const mergeRouter = require('./routes/merge');
+const detachRouter = require('./routes/detach');
 
 app.use('/create', createRouter);
 app.use('/delete', deleteRouter);
 app.use('/merge', mergeRouter);
+app.use('/detach', detachRouter);
 
 app.get('/status', (req, res) => {
     res.status(200).send('Server up and running.');
