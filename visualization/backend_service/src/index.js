@@ -1,8 +1,17 @@
+require('dotenv').config();
 const express = require('express');
 const { Server } = require('socket.io');
 const { PORT, nodeCount } = require('./config');
+
 const neo4j = require('neo4j-driver');
 const driver = neo4j.driver('bolt://localhost:7687');
+
+const { BskyAgent } = require('@atproto/api');
+const agent = new BskyAgent({
+    service: 'https://bsky.social/',
+});
+
+(async () => await agent.login({ identifier: process.env.HANDLE, password: process.env.PASSWORD }))();
 
 const app = express();
 
@@ -130,7 +139,9 @@ io.on('connection', (socket) => {
 module.exports = {
     io,
     sockets,
-    clientInterests
+    clientInterests,
+    driver,
+    agent
 };
 
 app.use(express.json());

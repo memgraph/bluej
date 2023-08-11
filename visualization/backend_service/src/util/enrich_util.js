@@ -1,17 +1,8 @@
-require('dotenv').config();
 const { verbose } = require('../config');
-
-const neo4j = require('neo4j-driver');
-const driver = neo4j.driver("bolt://localhost:7687", neo4j.auth.basic("", ""), { encrypted: 'ENCRYPTION_OFF' });
-
-const { BskyAgent } = require('@atproto/api');
-const agent = new BskyAgent({
-    service: 'https://bsky.social/',
-});
+const { driver, agent } = require('../index');
 
 const enrichPerson = async (did) => {
     try {
-        await agent.login({ identifier: process.env.HANDLE, password: process.env.PASSWORD });
         const user = await agent.getProfile({actor: did});
 
         if (!user) {
