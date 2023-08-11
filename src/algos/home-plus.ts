@@ -29,7 +29,7 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
 
         if (requesterDid.length === 0) {
             console.log('[ERROR] requesterDid is empty, using default')
-            requesterDid = 'did:plc:ewgejell4547pukut5255ibm5'
+            requesterDid = 'did:plc:ewgejell4547pukut5255ibm'
         }
 
         let limit = params.limit ? params.limit : 50

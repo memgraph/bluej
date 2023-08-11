@@ -64,7 +64,7 @@ Once done, follow these steps to run:
 6) `ts-node src/index.ts`
 
 To start creating your own feed, copy ./src/algos/home-plus.ts to a new file and register it in ./src/algos/index.ts. Restart ts-node and you should be able to call your feed by opening it up in your browser:
-http://localhost:3001/xrpc/app.bsky.feed.getFeedSkeleton?feed=at://did:plc:ewgejell4547pukut5255ibm/app.bsky.feed.generator/home-plus&limit=20
+http://localhost:3001/xrpc/app.bsky.feed.getFeedSkeleton?limit=20&feed=at%3A%2F%2Fdid%3Aplc%3A2wqomm3tjqbgktbrfwgvrw34%2Fapp.bsky.feed.generator%2Fhome-plus
 
 Replace did:plc:ewgejell4547pukut5255ibm with the DID from your account (running `ts-node scripts/get-did.ts myhandle.bsky.social` can help you find it) and /home-plus with the name of your feed. If it works you should see an output like
 

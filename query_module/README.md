@@ -20,7 +20,7 @@ Instructions on how to build the memgraph query module:
 
 
 ```
-docker run -d -p 7687:7687 --name bluej_module_builder memgraph/memgraph --telemetry-enabled=False
+docker run -d -p 7687:7687 -p 7444:7444 -p 3000:3000 --name bluej_module_builder memgraph/memgraph --telemetry-enabled=False
 
 docker exec -u 0 -it bluej_module_builder
 
