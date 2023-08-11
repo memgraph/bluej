@@ -139,11 +139,13 @@ const createRouter = require('./routes/create');
 const deleteRouter = require('./routes/delete');
 const mergeRouter = require('./routes/merge');
 const detachRouter = require('./routes/detach');
+const enrichRouter = require('./routes/enrich');
 
 app.use('/create', createRouter);
 app.use('/delete', deleteRouter);
 app.use('/merge', mergeRouter);
 app.use('/detach', detachRouter);
+app.use('/enrich', enrichRouter);
 
 app.get('/status', (req, res) => {
     res.status(200).send('Server up and running.');

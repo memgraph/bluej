@@ -34,6 +34,7 @@ DROP TRIGGER nodeCreate;
 DROP TRIGGER relationshipCreate;
 DROP TRIGGER nodeDelete;
 DROP TRIGGER relationshipDelete;
+DROP TRIGGER personEnrich;
 
 CREATE TRIGGER nodeCreate ON () CREATE AFTER COMMIT EXECUTE
 UNWIND createdVertices AS createdNode
@@ -50,6 +51,10 @@ RETURN visualization.delete_node(deletedNode);
 CREATE TRIGGER relationshipDelete ON --> DELETE AFTER COMMIT EXECUTE
 UNWIND deletedEdges AS deletedRelationship
 RETURN visualization.handle_relationship(deletedRelationship, "detach");
+
+CREATE TRIGGER personEnrich ON () CREATE AFTER COMMIT EXECUTE
+UNWIND createdVertices AS createdNode
+RETURN CASE LABELS(createdNode)[0] WHEN 'Person' THEN visualization.enrich_person(createdNode.did) END;
 ```
 
 ## Running

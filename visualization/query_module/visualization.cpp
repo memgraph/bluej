@@ -6,6 +6,7 @@
 const char *argumentNode = "node";
 const char *argumentRelationship = "relationship";
 const char *argumentAction = "action";
+const char *argumentDid = "did";
 
 const std::string base_url = "http://192.168.0.18:8080";
 
@@ -209,6 +210,53 @@ void delete_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
   }
 }
 
+void enrich_person(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    const std::string did = std::string(arguments[0].ValueString());
+    nlohmann::json json;
+    
+    json["did"] = did;
+    const std::string json_data = json.dump();
+
+    CURL *curl;
+    CURLcode response_code;
+    
+    curl = curl_easy_init();
+
+    if (curl == NULL) {
+      result.SetErrorMessage("Unable to create CURL handle.");
+      return;
+    }
+
+    const std::string url = base_url + "/enrich/person";
+
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, "charset: utf-8");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
+
+    response_code = curl_easy_perform(curl);
+
+    if (response_code == CURLE_OK) {
+      result.SetValue(json_data);
+    } else {
+      result.SetErrorMessage(curl_easy_strerror(response_code));
+    }
+
+    curl_easy_cleanup(curl);
+  } catch (const std::exception &e) {
+    result.SetErrorMessage(e.what());
+    return;
+  }
+}
+
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
     mgp::memory = memory;
@@ -224,6 +272,10 @@ extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *mem
 
     mgp::AddFunction(delete_node, "delete_node", {
       mgp::Parameter(argumentNode, mgp::Type::Node)
+    }, module, memory);
+
+    mgp::AddFunction(enrich_person, "enrich_person", {
+      mgp::Parameter(argumentDid, mgp::Type::String)
     }, module, memory);
 
     curl_global_init(CURL_GLOBAL_ALL);
