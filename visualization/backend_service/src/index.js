@@ -26,7 +26,7 @@ io.on('connection', (socket) => {
 
     socket.on('interest', async (clientInterest) => {
         if (clientInterest !== '') {
-            console.log('Client is interested in DID: ' + clientInterest);
+            console.log('Client is interested in handle: ' + clientInterest);
 
             const session = driver.session();
     
@@ -35,11 +35,11 @@ io.on('connection', (socket) => {
                 const DIDs = [];
                 const results = [];
 
-                const interestPerson = await session.run(`MATCH (interested:Person {did: "${clientInterest}"}) RETURN interested;`);
+                const interestPerson = await session.run(`MATCH (interested:Person {handle: "${clientInterest}"}) RETURN interested;`);
                 const initialRecord = interestPerson.records[0];
 
                 if (initialRecord) {
-                    DIDs.push(clientInterest);
+                    DIDs.push(initialRecord._fields[0].properties.did);
 
                     // Initialize visualization array with filtered node
                     results.push({
@@ -49,7 +49,7 @@ io.on('connection', (socket) => {
 
                     // Find the most active direct friends, add some of them (nodeCount - 1) to visualization array
                     const closeFollowers = await session.run(
-                        `MATCH (interested:Person {did: "${clientInterest}"})-[follow:FOLLOW]->(follower:Person)
+                        `MATCH (interested:Person {handle: "${clientInterest}"})-[follow:FOLLOW]->(follower:Person)
                         WITH interested, follow, follower
                         OPTIONAL MATCH (follower)-[]->(post:Post)
                         RETURN interested, follow, follower, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
@@ -91,7 +91,7 @@ io.on('connection', (socket) => {
                     
                     // Find friends of friends, add 1000 most active ones to the DID interest array
                     const distantFollowers = await session.run(
-                        `MATCH (interested:Person {did: "${clientInterest}"})-[:FOLLOW *2]->(follower:Person)
+                        `MATCH (interested:Person {handle: "${clientInterest}"})-[:FOLLOW *2]->(follower:Person)
                         WITH follower
                         OPTIONAL MATCH (follower)-[]->(post:Post)
                         RETURN follower.did AS did, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`

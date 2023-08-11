@@ -8,6 +8,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';                                 
 
 function App({socket}) {
+    const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
+    
     const [nodes, setNodes] = useState({});
     const [links, setLinks] = useState({});
 
@@ -21,13 +23,11 @@ function App({socket}) {
     const [selectedDescActive, setSelectedDescActive] = useState(false);
     const [currTimeout, setCurrTimeout] = useState(null);
 
-    const [highlighted, setHighlighted] = useState(false);
-
-    const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
-
-    const [interestID, setInterestID] = useState('');
+    const [interestHandle, setInterestHandle] = useState('');
     const [searchString, setSearchString] = useState('');
-    const [searchSubmitted, setSearchSubmitted] = useState(false);
+    
+    const [highlighted, setHighlighted] = useState(false);
+    const [subscribed, setSubscribed] = useState(false);
 
     const fgRef = useRef();
     const maxNodes = 250;
@@ -209,14 +209,8 @@ function App({socket}) {
     const handleSearchSubmit = useCallback(e => {
         e.preventDefault();
 
-        setInterestID(searchString);
+        setInterestHandle(searchString);
         socket.emit('interest', searchString);
-
-        if (searchString) {
-            setSearchSubmitted(true);
-        } else {
-            setSearchSubmitted(false);
-        }
         
         clear();
     }, [searchString, socket, clear]);
@@ -636,9 +630,15 @@ function App({socket}) {
                     onMerge(curr_rel.relationship, false);
                 });
             }
+
+            if (interestHandle) {
+                setSubscribed(true);
+            } else {
+                setSubscribed(false);
+            }
         }
 
-        const eventName = `initial ${interestID}`
+        const eventName = `initial ${interestHandle}`
 
         socket.on('create', onCreate);
         socket.on('merge', onMerge);
@@ -653,7 +653,7 @@ function App({socket}) {
             socket.off('detach', onDetach);
             socket.off(eventName, onInterest);
         };
-    }, [nodes, links, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestID, socket, clear]);
+    }, [nodes, links, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestHandle, socket, clear]);
 
     return (
         <>
@@ -675,8 +675,8 @@ function App({socket}) {
                     color='warning'
                     size='small'
 
-                    label='Subscribe with user ID'
-                    placeholder='did:plc:123qwerty'
+                    label='Subscribe with user handle'
+                    placeholder='example.bsky.social'
                     value={searchString}
 
                     InputProps={{
@@ -688,7 +688,7 @@ function App({socket}) {
                     }}
 
                     sx={{
-                        width: '600px',
+                        width: '400px',
                         fontSize: '17.5px'
                     }}
 
@@ -702,10 +702,10 @@ function App({socket}) {
                     onClick={(e) => {
                         e.preventDefault();
                         setSearchString('');
-                        setInterestID('');
+                        setInterestHandle('');
 
                         socket.emit('interest', '');
-                        setSearchSubmitted(false);
+                        setSubscribed(false);
                         clear();
                     }}
                 >
@@ -720,7 +720,7 @@ function App({socket}) {
                     Subscribe
                 </Button>
             </div>
-            {searchSubmitted && Object.keys(nodes).length === 0 && 
+            {subscribed && Object.keys(nodes).length === 0 && 
             <div className='noNodesWarning'>
                 Zero nodes found for subscribed user ID.
                 Please wait a bit, enter a different ID or clear the current one.
