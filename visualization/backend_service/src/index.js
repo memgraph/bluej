@@ -35,7 +35,7 @@ io.on('connection', (socket) => {
                 const DIDs = [];
                 const results = [];
 
-                const interestPerson = await session.run(`MATCH (interest:Person {did: "${clientInterest}"}) RETURN interest;`);
+                const interestPerson = await session.run(`MATCH (interested:Person {did: "${clientInterest}"}) RETURN interested;`);
                 const initialRecord = interestPerson.records[0];
 
                 if (initialRecord) {
@@ -43,13 +43,15 @@ io.on('connection', (socket) => {
 
                     // Initialize visualization array with filtered node
                     results.push({
-                        type: initialRecord._fields[0].labels[0].toLowerCase(),
+                        type: initialRecord._fields[0].labels[0],
                         ...initialRecord._fields[0].properties
                     });
 
                     // Find the most active direct friends, add some of them (nodeCount - 1) to visualization array
                     const closeFollowers = await session.run(
-                        `MATCH (interested:Person {did: "${clientInterest}"})-[follow:FOLLOW]->(follower:Person)-[]->(post:Post)
+                        `MATCH (interested:Person {did: "${clientInterest}"})-[follow:FOLLOW]->(follower:Person)
+                        WITH interested, follow, follower
+                        OPTIONAL MATCH (follower)-[]->(post:Post)
                         RETURN interested, follow, follower, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
                     );
     
@@ -64,12 +66,12 @@ io.on('connection', (socket) => {
                             }
     
                             const node1 = {
-                                type: record._fields[0].labels[0].toLowerCase(),
+                                type: record._fields[0].labels[0],
                                 ...record._fields[0].properties
                             };
                             
                             const node2 = {
-                                type: record._fields[2].labels[0].toLowerCase(),
+                                type: record._fields[2].labels[0],
                                 ...record._fields[2].properties
                             };
             
@@ -77,7 +79,7 @@ io.on('connection', (socket) => {
                             let target = record._fields[2].properties.did;
             
                             const relationship = {
-                                type: record._fields[1].type.toLowerCase(),
+                                type: record._fields[1].type,
                                 source,
                                 target
                             };
@@ -89,7 +91,9 @@ io.on('connection', (socket) => {
                     
                     // Find friends of friends, add 1000 most active ones to the DID interest array
                     const distantFollowers = await session.run(
-                        `MATCH (p:Person {did: "${clientInterest}"})-[:FOLLOW *2]->(follower:Person)-[]->(post:Post)
+                        `MATCH (interested:Person {did: "${clientInterest}"})-[:FOLLOW *2]->(follower:Person)
+                        WITH follower
+                        OPTIONAL MATCH (follower)-[]->(post:Post)
                         RETURN follower.did AS did, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
                     );
     

@@ -11,7 +11,7 @@ function App({socket}) {
     const [nodes, setNodes] = useState({});
     const [links, setLinks] = useState({});
 
-    const [hoverNode, setHoverNode] = useState(null);
+    const [highlightNode, setHighlightNode] = useState(null);
     const [highlightNodes, setHighlightNodes] = useState(new Set());
     const [highlightLinks, setHighlightLinks] = useState(new Set());
 
@@ -70,15 +70,15 @@ function App({socket}) {
 
     useEffect(() => {
         if (highlighted) {
-            if (!highlightLinks.size && !hoverNode && !selectedNode) {
+            if (!highlightLinks.size && !highlightNode && !selectedNode) {
                 setHighlighted(false);
             }
         } else {
-            if (highlightLinks.size || hoverNode || selectedNode) {
+            if (highlightLinks.size || highlightNode || selectedNode) {
                 setHighlighted(true);
             }
         }
-    }, [highlighted, highlightLinks, hoverNode, selectedNode]);
+    }, [highlighted, highlightLinks, highlightNode, selectedNode]);
 
     const clear = useCallback(() => {
         setNodes({});
@@ -94,7 +94,7 @@ function App({socket}) {
         setCurrTimeout(null);
         setSelectedDescActive(false);
 
-        setHoverNode(null);
+        setHighlightNode(null);
         setHighlightNodes(new Set());
         setHighlightLinks(new Set());
 
@@ -189,7 +189,7 @@ function App({socket}) {
             });
         }
 
-        setHoverNode(node || null);
+        setHighlightNode(node || null);
         updateHighlight();
     };
 
@@ -221,109 +221,105 @@ function App({socket}) {
             let nodeKey = msg?.did || msg.uri;
             let nodeExists = nodes[nodeKey] !== undefined;
 
-            if (nodeExists) {
-                setNodes(previous => {
-                    let cpy = {...previous};
-                    delete cpy[nodeKey];
+            if (!nodeExists) {
+                return;
+            }
 
-                    return {
-                        ...cpy
-                    };
-                });
+            let node = nodes[nodeKey];
+            let wasCenter = false;
 
-                setLinks(previous => {
-                    let cpy = {...previous};
-                    Object.keys(previous).forEach(key => {
-                        let splitRelationship = key.split(' ');
-                        let firstNode = splitRelationship[0];
-                        let secondNode = splitRelationship[2];
+            setNodes(previous => {
+                let cpy = {...previous};
+                delete cpy[nodeKey];
+
+                return {
+                    ...cpy
+                };
+            });
+
+            if (highlightNodes.has(node)) {
+                highlightNodes.delete(node);
+                setHighlightNodes(new Set(highlightNodes));
+            }
+
+            if (selectedNodes.has(node)) {
+                selectedNodes.delete(node);
+                setSelectedNodes(new Set(selectedNodes));
+            }
+
+            if (highlightNode === node) {
+                setHighlightNode(null);
+                setHighlightNodes(new Set());
+                setHighlightLinks(new Set());
+
+                wasCenter = true;
+            }
+
+            if (selectedNode === node) {
+                setSelectedNode(null);
+                setSelectedNodes(new Set());
+                setSelectedLinks(new Set());
+        
+                clearTimeout(currTimeout);
+                setCurrTimeout(null);
+                setSelectedDescActive(false);
+
+                wasCenter = true;
+            }
+
+            setLinks(previous => {
+                let cpy = {...previous};
+                Object.keys(previous).forEach(key => {
+                    let splitRelationship = key.split(' ');
+                    let firstNode = splitRelationship[0];
+                    let secondNode = splitRelationship[2];
+                    
+                    if (firstNode.startsWith(nodeKey) || secondNode.startsWith(nodeKey)) {
+                        let link = links[key];
+                        let source_node = nodes[firstNode];
+                        let target_node = nodes[secondNode];
                         
-                        if (firstNode.startsWith(nodeKey) || secondNode.startsWith(nodeKey)) {
-                            let link = links[key];
-                            let source_node = nodes[firstNode];
-                            let target_node = nodes[secondNode];
-                            
-                            delete cpy[key];
+                        delete cpy[key];
 
-                            if (highlightLinks.has(link)) {
-                                highlightLinks.delete(link);
-                                setHighlightLinks(new Set(highlightLinks));
+                        if (highlightLinks.has(link)) {
+                            highlightLinks.delete(link);
+                            setHighlightLinks(new Set(highlightLinks));
 
-                                if (source_node !== hoverNode) {
-                                    highlightNodes.delete(source_node);
-                                    setHighlightNodes(new Set(highlightNodes));
-                                }
-                
-                                if (target_node !== hoverNode) {
-                                    highlightNodes.delete(target_node);
-                                    setHighlightNodes(new Set(highlightNodes));
-                                }
+                            if (source_node !== highlightNode) {
+                                highlightNodes.delete(source_node);
+                                setHighlightNodes(new Set(highlightNodes));
                             }
-
-                            if (selectedLinks.has(link)) {
-                                selectedLinks.delete(link);
-                                setSelectedLinks(new Set(selectedLinks));
-
-                                if (source_node !== selectedNode) {
-                                    selectedNodes.delete(source_node);
-                                    setSelectedNodes(new Set(selectedNodes));
-                                }
-                                
-                                if (target_node !== selectedNode) {
-                                    selectedNodes.delete(target_node);
-                                    setSelectedNodes(new Set(selectedNodes));
-                                }
+            
+                            if (target_node !== highlightNode) {
+                                highlightNodes.delete(target_node);
+                                setHighlightNodes(new Set(highlightNodes));
                             }
                         }
-                    });
 
-                    return {
-                        ...cpy
-                    };
+                        if (selectedLinks.has(link)) {
+                            selectedLinks.delete(link);
+                            setSelectedLinks(new Set(selectedLinks));
+
+                            if (source_node !== selectedNode) {
+                                selectedNodes.delete(source_node);
+                                setSelectedNodes(new Set(selectedNodes));
+                            }
+                            
+                            if (target_node !== selectedNode) {
+                                selectedNodes.delete(target_node);
+                                setSelectedNodes(new Set(selectedNodes));
+                            }
+                        }
+                    }
                 });
 
-                let node = nodes[nodeKey];
-                let wasCenter = false;
+                return {
+                    ...cpy
+                };
+            });
 
-                if (highlightNodes.has(node)) {
-                    highlightNodes.delete(node);
-                    setHighlightNodes(new Set(highlightNodes));
-                }
-
-                if (selectedNodes.has(node)) {
-                    selectedNodes.delete(node);
-                    setSelectedNodes(new Set(selectedNodes));
-                }
-
-                if (hoverNode === node) {
-                    setHoverNode(null);
-                    setHighlightNodes(new Set());
-                    setHighlightLinks(new Set());
-
-                    wasCenter = true;
-                }
-
-                if (selectedNode === node) {
-                    setSelectedNode(null);
-                    setSelectedNodes(new Set());
-                    setSelectedLinks(new Set());
-            
-                    clearTimeout(currTimeout);
-                    setCurrTimeout(null);
-                    setSelectedDescActive(false);
-
-                    wasCenter = true;
-                }
-
-                setNodes(previous => {
-                    return {
-                        ...previous
-                    };
-                });
-
-                if (wasCenter) {
-                    toast.warn("The node you were focused on has been deleted.");
-                }
+            if (wasCenter) {
+                toast.warn('The node you were focused on has been deleted.');
             }
         }
 
@@ -332,14 +328,14 @@ function App({socket}) {
                 return;
             }
 
-            if (msg.type === 'person') {
+            if (msg.type === 'Person') {
                 setNodes(previous => ({
                     ...previous,
                     [msg.did]: {
                         id: msg.did, group: 2
                     }
                 }));
-            } else if (msg.type === 'post') {
+            } else if (msg.type === 'Post') {
                 setNodes(previous => ({
                     ...previous,
                     [msg.uri]: {
@@ -354,7 +350,7 @@ function App({socket}) {
                 return;
             }
 
-            if (msg.type === 'root') {
+            if (msg.type === 'ROOT') {
                 let rootExists = nodes[msg.target] !== undefined;
                 let nodeExists = nodes[msg.source] !== undefined;
 
@@ -384,11 +380,11 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.source + ' hasRoot ' + msg.target]: {
+                    [msg.source + ' ' + msg.type + ' ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'has root'
                     }
                 }));
-            } else if (msg.type === 'parent') {
+            } else if (msg.type === 'PARENT') {
                 let parentExists = nodes[msg.target] !== undefined;
                 let nodeExists = nodes[msg.source] !== undefined;
 
@@ -418,11 +414,11 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.source + ' hasParent ' + msg.target]: {
+                    [msg.source + ' ' + msg.type + ' ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'has parent'
                     }
                 }));
-            } else if (msg.type === 'follow') {
+            } else if (msg.type === 'FOLLOW') {
                 let p1Exists = nodes[msg.source] !== undefined;
                 let p2Exists = nodes[msg.target] !== undefined;
 
@@ -452,11 +448,11 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.source + ' followed ' + msg.target]: {
+                    [msg.source + ' ' + msg.type + ' ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'followed'
                     }
                 }));
-            } else if (msg.type === 'like') {
+            } else if (msg.type === 'LIKE') {
                 let personExists = nodes[msg.source] !== undefined;
                 let postExists = nodes[msg.target] !== undefined;
                 
@@ -486,11 +482,11 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.source + ' liked ' + msg.target]: {
+                    [msg.source + ' ' + msg.type + ' ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'liked'
                     }
                 }));
-            } else if (msg.type === 'author_of') {
+            } else if (msg.type === 'AUTHOR_OF') {
                 let personExists = nodes[msg.source] !== undefined;
                 let postExists = nodes[msg.target] !== undefined;
                 
@@ -520,11 +516,11 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.source + ' authorOf ' + msg.target]: {
+                    [msg.source + ' ' + msg.type + ' ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'is author of'
                     }
                 }));
-            } else if (msg.type === 'repost_of') {
+            } else if (msg.type === 'REPOST_OF') {
                 let repostExists = nodes[msg.source] !== undefined;
                 let originalPostExists = nodes[msg.target] !== undefined;
 
@@ -554,7 +550,7 @@ function App({socket}) {
 
                 setLinks(previous => ({
                     ...previous,
-                    [msg.source + ' isRepostOf ' + msg.target]: {
+                    [msg.source + ' ' + msg.type + ' ' + msg.target]: {
                         source: msg.source, target: msg.target, value: 'is repost of'
                     }
                 }));
@@ -562,49 +558,26 @@ function App({socket}) {
         }
 
         const onDetach = msg => {
-            let key = '';
-
-            switch (msg.type) {
-                case 'root':
-                    key = msg.source + ' hasRoot ' + msg.target;
-                    break;
-                case 'parent':
-                    key = msg.source + ' hasParent ' + msg.target;
-                    break;
-                case 'follow':
-                    key = msg.source + ' followed ' + msg.target;
-                    break;
-                case 'like':
-                    key = msg.source + ' liked ' + msg.target;
-                    break;
-                case 'author_of':
-                    key = msg.source + ' authorOf ' + msg.target;
-                    break;
-                case 'repost_of':
-                    key = msg.source + ' isRepostOf ' + msg.target;
-                    break;
-                default:
-                    return;
-            }
-
+            let key = msg.source + ' ' + msg.type + ' ' + msg.target;
             let link = links[key];
-            let source_node = nodes[msg.source];
-            let target_node = nodes[msg.target];
 
             if (!link) {
                 return;
             }
 
+            let source_node = nodes[msg.source];
+            let target_node = nodes[msg.target];
+
             if (highlightLinks.has(link)) {
                 highlightLinks.delete(link);
                 setHighlightLinks(new Set(highlightLinks));
 
-                if (source_node !== hoverNode) {
+                if (source_node !== highlightNode) {
                     highlightNodes.delete(source_node);
                     setHighlightNodes(new Set(highlightNodes));
                 }
 
-                if (target_node !== hoverNode) {
+                if (target_node !== highlightNode) {
                     highlightNodes.delete(target_node);
                     setHighlightNodes(new Set(highlightNodes));
                 }
@@ -675,7 +648,7 @@ function App({socket}) {
             socket.off('detach', onDetach);
             socket.off(eventName, onInterest);
         };
-    }, [nodes, links, hoverNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestID, socket, clear]);
+    }, [nodes, links, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestID, socket, clear]);
 
     return (
         <>
@@ -767,7 +740,7 @@ function App({socket}) {
                 <div className='infoTitle'>
                     {
                         selectedNode.id.startsWith('did') ? 
-                            "Person" : "Post"
+                            'Person' : 'Post'
                     }
                     <div className='exit' onClick={clearSelected}/>
                 </div>
@@ -867,7 +840,7 @@ function App({socket}) {
                 nodeLabel={node => nodeGroupNames[node.group]}
                 nodeRelSize={10}
                 nodeColor={node => {
-                    if (hoverNode === node || selectedNode === node) {
+                    if (highlightNode === node || selectedNode === node) {
                         return nodeColorScheme[3]
                     }
                     if (highlightNodes.has(node) || selectedNodes.has(node)) {

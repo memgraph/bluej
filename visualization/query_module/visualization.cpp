@@ -1,7 +1,6 @@
 #include <mgp.hpp>
 #include <curl/curl.h>
 #include <string>
-#include <string_view>
 #include "json.hpp"
 
 const char *argumentNode = "node";
@@ -19,12 +18,7 @@ void create_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
     auto node = arguments[0].ValueNode();
     nlohmann::json json;
 
-    std::string_view label = node.Labels()[0];
-    if (label == "Person") {
-      json["type"] = "person";
-    } else if (label == "Post") {
-      json["type"] = "post";
-    }
+    json["type"] = std::string(node.Labels()[0]);
 
     for (const auto& [key, value] : node.Properties()) {
       if (value.Type() == mgp::Type::String) {
@@ -79,24 +73,22 @@ void handle_relationship(mgp_list *args, mgp_func_context *ctx, mgp_func_result 
     const std::string action = std::string(arguments[1].ValueString());
     nlohmann::json json;
 
-    std::string_view type = relationship.Type();
+    std::string type = std::string(relationship.Type());
+    json["type"] = type;
+    
     auto source_node = relationship.From();
     auto target_node = relationship.To();
 
     if (type == "AUTHOR_OF") {
-      json["type"] = "author_of";
       json["source"] = std::string(source_node.GetProperty("did").ValueString());
       json["target"] = std::string(target_node.GetProperty("uri").ValueString());
     } else if (type == "FOLLOW") {
-      json["type"] = "follow";
       json["source"] = std::string(source_node.GetProperty("did").ValueString());
       json["target"] = std::string(target_node.GetProperty("did").ValueString());    
     } else if (type == "LIKE") {
-      json["type"] = "like";
       json["source"] = std::string(source_node.GetProperty("did").ValueString());
       json["target"] = std::string(target_node.GetProperty("uri").ValueString());
     } else if (type == "ROOT") {
-      json["type"] = "root";
       json["source"] = std::string(source_node.GetProperty("uri").ValueString());
       json["target"] = std::string(target_node.GetProperty("uri").ValueString());
 
@@ -105,7 +97,6 @@ void handle_relationship(mgp_list *args, mgp_func_context *ctx, mgp_func_result 
         json["author"] = std::string(author.ValueString());
       }
     } else if (type == "PARENT") {
-      json["type"] = "parent";
       json["source"] = std::string(source_node.GetProperty("uri").ValueString());
       json["target"] = std::string(target_node.GetProperty("uri").ValueString());
 
@@ -114,7 +105,6 @@ void handle_relationship(mgp_list *args, mgp_func_context *ctx, mgp_func_result 
         json["author"] = std::string(author.ValueString());
       }
     } else if (type == "REPOST_OF") {
-      json["type"] = "repost_of";
       json["source"] = std::string(source_node.GetProperty("uri").ValueString());
       json["target"] = std::string(target_node.GetProperty("uri").ValueString());
 
@@ -170,7 +160,7 @@ void delete_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
     auto node = arguments[0].ValueNode();
     nlohmann::json json;
 
-    std::string_view label = node.Labels()[0];
+    std::string label = std::string(node.Labels()[0]);
     if (label == "Person") {
       json["did"] = std::string(node.GetProperty("did").ValueString());
     } else if (label == "Post") {
