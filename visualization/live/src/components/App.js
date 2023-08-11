@@ -208,12 +208,17 @@ function App({socket}) {
 
     const handleSearchSubmit = useCallback(e => {
         e.preventDefault();
-        clear();
-
-        socket.emit('interest', searchString);
 
         setInterestID(searchString);
-        setSearchSubmitted(true);
+        socket.emit('interest', searchString);
+
+        if (searchString) {
+            setSearchSubmitted(true);
+        } else {
+            setSearchSubmitted(false);
+        }
+        
+        clear();
     }, [searchString, socket, clear]);
 
     useEffect(() => {
@@ -698,8 +703,9 @@ function App({socket}) {
                         e.preventDefault();
                         setSearchString('');
                         setInterestID('');
-                        setSearchSubmitted(false);
+
                         socket.emit('interest', '');
+                        setSearchSubmitted(false);
                         clear();
                     }}
                 >
