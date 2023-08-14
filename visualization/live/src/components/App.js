@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
-import { TextField, InputAdornment, Button, Divider, Link } from '@mui/material';
+import { TextField, InputAdornment, Button, Divider, Link, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { FormControl, FormGroup, FormControlLabel, InputLabel, Select, MenuItem, Checkbox } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SquareIcon from '@mui/icons-material/Square';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';                                 
 
@@ -12,6 +14,7 @@ function App({socket}) {
     
     const [nodes, setNodes] = useState({});
     const [links, setLinks] = useState({});
+    const [maxNodes, setMaxNodes] = useState(250);
 
     const [highlightNode, setHighlightNode] = useState(null);
     const [highlightNodes, setHighlightNodes] = useState(new Set());
@@ -29,8 +32,10 @@ function App({socket}) {
     const [highlighted, setHighlighted] = useState(false);
     const [subscribed, setSubscribed] = useState(false);
 
+    const [animation, setAnimation] = useState(true);
+    const [coloring, setColoring] = useState(true);
+
     const fgRef = useRef();
-    const maxNodes = 250;
     const animationTime = 2000;
 
     const nodeGroupNames = {
@@ -43,8 +48,8 @@ function App({socket}) {
     const nodeColorScheme = {
         1: '#FFC516',
         2: '#6E0097',
-        3: '#4ed5ed',
-        4: '#a5ed4e'
+        3: '#4ED5ED',
+        4: '#A5ED4E'
     };
 
     const linkColorScheme = {
@@ -86,13 +91,13 @@ function App({socket}) {
 
         setHighlighted(false);
 
-        setSelectedNode(null);
-        setSelectedNodes(new Set());
-        setSelectedLinks(new Set());
-
         clearTimeout(currTimeout);
         setCurrTimeout(null);
         setSelectedDescActive(false);
+
+        setSelectedNode(null);
+        setSelectedNodes(new Set());
+        setSelectedLinks(new Set());
 
         setHighlightNode(null);
         setHighlightNodes(new Set());
@@ -118,10 +123,15 @@ function App({socket}) {
         setSelectedDescActive(false);
 
         setSelectedNode(null);
-        selectedNodes.clear();
-        selectedLinks.clear();
-        updateSelected();
-    }, [selectedNodes, selectedLinks, currTimeout, updateSelected]);
+        setSelectedNodes(new Set());
+        setSelectedLinks(new Set());
+
+        setNodes(previous => {
+            return {
+                ...previous
+            };
+        });
+    }, [currTimeout]);
 
     const handleClick = useCallback(node => {
         if (node.x === 0 && node.y === 0 && node.z === 0) {
@@ -166,6 +176,18 @@ function App({socket}) {
             };
         });
     };
+
+    const clearHighlight = () => {
+        setHighlightNode(null);
+        setHighlightNodes(new Set());
+        setHighlightLinks(new Set());
+
+        setNodes(previous => {
+            return {
+                ...previous
+            };
+        });
+    }
 
     const handleNodeHover = node => {
         highlightNodes.clear();
@@ -214,6 +236,23 @@ function App({socket}) {
         
         clear();
     }, [searchString, socket, clear]);
+
+    const handleMaxNodeChange = useCallback((max) => {
+        if (max < maxNodes) {
+            clear();
+        }
+
+        setMaxNodes(max);
+    }, [maxNodes, clear])
+
+    const handleAnimationChanged = useCallback((disabled) => {
+        if (disabled) {
+            clearSelected();
+            clearHighlight();
+        }
+
+        setAnimation(!disabled);
+    }, [clearSelected]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -653,7 +692,7 @@ function App({socket}) {
             socket.off('detach', onDetach);
             socket.off(eventName, onInterest);
         };
-    }, [nodes, links, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestHandle, socket, clear]);
+    }, [nodes, links, maxNodes, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestHandle, socket, clear]);
 
     return (
         <>
@@ -725,6 +764,7 @@ function App({socket}) {
                 Zero nodes found for subscribed user ID.
                 Please wait a bit, enter a different ID or clear the current one.
             </div>}
+            {coloring &&
             <div className='legend'>
                 <div className='infoTitle'>
                     Node types
@@ -740,7 +780,7 @@ function App({socket}) {
                         </div>
                     )
                 })}
-            </div>
+            </div>}
             {selectedDescActive && selectedNode &&
             <div className='nodeInfo'>
                 <div className='infoTitle'>
@@ -846,20 +886,28 @@ function App({socket}) {
                 nodeLabel={node => nodeGroupNames[node.group]}
                 nodeRelSize={10}
                 nodeColor={node => {
+                    if (!coloring) {
+                        return '#FFFFFF';
+                    }
                     if (highlightNode === node || selectedNode === node) {
-                        return nodeColorScheme[3]
+                        return nodeColorScheme[3];
                     }
                     if (highlightNodes.has(node) || selectedNodes.has(node)) {
-                        return nodeColorScheme[4]
+                        return nodeColorScheme[4];
                     }
-                    return nodeColorScheme[node.group]
+                    return nodeColorScheme[node.group];
                 }}
                 nodeOpacity={1}
 
                 linkLabel='value'
                 linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
                 linkCurvature={0.25}
-                linkColor={link => linkColorScheme[link.value]}
+                linkColor={link => {
+                    if (!coloring) {
+                        return '#FFFFFF';
+                    }
+                    return linkColorScheme[link.value];
+                }}
 
                 linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
                 linkDirectionalArrowRelPos={0.5}
@@ -868,14 +916,67 @@ function App({socket}) {
                 linkDirectionalParticleWidth={5}
                 linkDirectionalParticleSpeed={0.025}
 
-                onNodeClick={handleClick}
-                onNodeHover={handleNodeHover}
-                onLinkHover={handleLinkHover}
+                onNodeClick={animation && handleClick}
+                onNodeHover={animation && handleNodeHover}
+                onLinkHover={animation && handleLinkHover}
 
                 forceEngine='d3'
                 d3AlphaDecay={highlighted ? 1 : 0}
                 d3VelocityDecay={0.75}
             />
+            <Accordion
+                sx={{
+                    position: 'absolute',
+                    bottom: '0px',
+                    left: '50%',
+                    transform: 'translate(-50%, 0%)',
+                    zIndex: '1',
+
+                    padding: '10px',
+                    borderRadius: '10px 10px 0px 0px !important',
+                    backgroundColor: '#E0E0E0',
+                    fontSize: '17.5px',
+
+                    '&:before': {
+                        display: 'none'
+                    }
+                }}
+            >
+                <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
+                    Performance options
+                </AccordionSummary>
+                <AccordionDetails
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '600px'
+                    }} 
+                >
+                    <FormControl variant='outlined' sx={{ width: '150px'}}>
+                        <InputLabel color='warning'>Max node count</InputLabel>
+                        <Select
+                            value={maxNodes}
+                            onChange={(e) => handleMaxNodeChange(e.target.value)}
+                            color='warning'
+                            label='Max node count'
+                        >
+                            <MenuItem value={50}>50</MenuItem>
+                            <MenuItem value={100}>100</MenuItem>
+                            <MenuItem value={150}>150</MenuItem>
+                            <MenuItem value={200}>200</MenuItem>
+                            <MenuItem value={250}>250</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <FormGroup>
+                        <FormControlLabel control={<Checkbox color='warning' onChange={(e) => handleAnimationChanged(e.target.checked)}/>} label='Disable animations' labelPlacement='start'/>
+                    </FormGroup>
+                    <FormGroup>
+                        <FormControlLabel control={<Checkbox color='secondary' onChange={(e) => setColoring(!e.target.checked)}/>} label='Disable coloring' labelPlacement='start'/>
+                    </FormGroup>
+                </AccordionDetails>
+            </Accordion>
         </>
     );
 };
