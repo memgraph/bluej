@@ -1,10 +1,15 @@
 const express = require('express');
-const { verbose } = require('../config');
+const { enrichment, verbose } = require('../config');
 const enrichPerson = require('../util/enrich_util');
 
 const router = express.Router();
 
 router.post('/person', async (req, res) => {
+    if (!enrichment) {
+        res.sendStatus(200);
+        return;
+    }
+
     const did = req.body.did;
 
     const result = await enrichPerson(did);
