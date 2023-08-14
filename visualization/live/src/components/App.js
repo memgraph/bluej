@@ -85,7 +85,7 @@ function App({socket}) {
         }
     }, [highlighted, highlightLinks, highlightNode, selectedNode]);
 
-    const clear = useCallback(() => {
+    const clear = useCallback((resetCamera = true) => {
         setNodes({});
         setLinks({});
 
@@ -103,7 +103,9 @@ function App({socket}) {
         setHighlightNodes(new Set());
         setHighlightLinks(new Set());
 
-        fgRef.current.cameraPosition({x: 500, y: 500, z: 500}, null, animationTime);
+        if (resetCamera) {
+            fgRef.current.cameraPosition({x: 500, y: 500, z: 500}, null, animationTime);
+        }
     }, [currTimeout]);
 
     const updateSelected = useCallback(() => {
@@ -239,7 +241,7 @@ function App({socket}) {
 
     const handleMaxNodeChange = useCallback((max) => {
         if (max < maxNodes) {
-            clear();
+            clear(false);
         }
 
         setMaxNodes(max);
@@ -647,7 +649,7 @@ function App({socket}) {
         }
         
         const onInterest = msg => {
-            clear();
+            clear(false);
 
             if (msg.length > 0) {
                 let startNode = msg[0];
@@ -962,11 +964,11 @@ function App({socket}) {
                             color='warning'
                             label='Max node count'
                         >
-                            <MenuItem value={50}>50</MenuItem>
                             <MenuItem value={100}>100</MenuItem>
-                            <MenuItem value={150}>150</MenuItem>
-                            <MenuItem value={200}>200</MenuItem>
                             <MenuItem value={250}>250</MenuItem>
+                            <MenuItem value={500}>500</MenuItem>
+                            <MenuItem value={1000}>1000</MenuItem>
+                            <MenuItem value={2500}>2500</MenuItem>
                         </Select>
                     </FormControl>
                     <FormGroup>
