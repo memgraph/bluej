@@ -235,17 +235,18 @@ function App({socket}) {
 
         setInterestHandle(searchString);
         socket.emit('interest', searchString);
+        setSubscribed(false);
         
         clear();
     }, [searchString, socket, clear]);
 
     const handleMaxNodeChange = useCallback((max) => {
-        if (max < maxNodes) {
+        if (max < Object.keys(nodes).length) {
             clear(false);
         }
 
         setMaxNodes(max);
-    }, [maxNodes, clear])
+    }, [nodes, clear])
 
     const handleAnimationChanged = useCallback((disabled) => {
         if (disabled) {
