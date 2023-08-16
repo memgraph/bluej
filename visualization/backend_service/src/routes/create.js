@@ -1,6 +1,5 @@
 const express = require('express');
 const { sockets, clientInterests } = require('../index');
-const { verbose } = require('../config');
 
 const router = express.Router();
 
@@ -15,7 +14,7 @@ router.post('/', (req, res) => {
         }
     });
 
-    if (verbose) {
+    if (process.env.VERBOSE === 'true') {
         process.stdout.write('C');
     }
 

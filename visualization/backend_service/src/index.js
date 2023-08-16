@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const { Server } = require('socket.io');
-const { PORT, nodeCount } = require('./config');
 
 const neo4j = require('neo4j-driver');
 const driver = neo4j.driver('bolt://localhost:7687');
@@ -15,13 +14,13 @@ const agent = new BskyAgent({
 
 const app = express();
 
-const server = app.listen(PORT, () => {
-    console.log(`App listening on port ${PORT}.`);
+const server = app.listen(parseInt(process.env.PORT), () => {
+    console.log(`App listening on port ${process.env.PORT}.`);
 });
 
 const io = new Server(server, {
     cors: {
-      origin: 'http://localhost:3001'
+      origin: process.env.CLIENT
     }
 });
 
@@ -70,7 +69,7 @@ io.on('connection', (socket) => {
                         closeFollowers.records.forEach(record => {
                             DIDs.push(record._fields[2].properties.did);
     
-                            if (cnt >= nodeCount) {
+                            if (cnt >= parseInt(process.env.NODE_COUNT)) {
                                 return;
                             }
     

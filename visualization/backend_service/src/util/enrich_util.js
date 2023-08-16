@@ -1,4 +1,3 @@
-const { verbose } = require('../config');
 const { driver, agent } = require('../index');
 
 const enrichPerson = async (did) => {
@@ -6,7 +5,7 @@ const enrichPerson = async (did) => {
         const user = await agent.getProfile({actor: did});
 
         if (!user) {
-            if (verbose) {
+            if (process.env.VERBOSE === 'true') {
                 console.log('Failed to fetch user profile.');
             }
 
@@ -38,7 +37,7 @@ const enrichPerson = async (did) => {
 
         return result;
     } catch (err) {
-        if (verbose) {
+        if (process.env.VERBOSE === 'true') {
             console.log(err);
         }
         

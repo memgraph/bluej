@@ -8,7 +8,8 @@ const char *argumentRelationship = "relationship";
 const char *argumentAction = "action";
 const char *argumentDid = "did";
 
-const std::string base_url = "http://192.168.0.18:8080";
+const std::string base_url = "http://192.168.0.18:3002";
+// const std::string base_url = "http://localhost:3002";
 
 void create_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
   mgp::memory = memory;
