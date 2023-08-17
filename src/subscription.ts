@@ -74,23 +74,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.follows.deletes.length > 0) {
       for (const follow of ops.follows.deletes) {
         if (verbose) process.stdout.write('F')
-        const result = await this.executeQuery("MATCH (f:FOLLOW {uri: $uri}) DETACH DELETE f;", {
+        await this.executeQuery("MATCH ()-[f:FOLLOW {uri: $uri}]-() DELETE f;", {
           uri: follow.uri
-        })
-
-        fetch(apiAddress + '/delete', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'follow', 
-            uri: follow.uri
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
         })
       }
     }
@@ -106,23 +91,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.likes.deletes.length > 0) {
       for (const like of ops.likes.deletes) {
         if (verbose) process.stdout.write('L')
-        const result = await this.executeQuery("MATCH (l:LIKE {uri: $uri}) DETACH DELETE l;", {
+        await this.executeQuery("MATCH ()-[l:LIKE {uri: $uri}]-() DELETE l;", {
           uri: like.uri
-        })
-
-        fetch(apiAddress + '/delete', {
-          method: "POST",
-          body: JSON.stringify({
-            type: 'like', 
-            uri: like.uri
-          }),
-          headers: {
-            "Content-type": "application/json; charset=UTF-8"
-          }
-        }).catch((err) => {
-          if (verbose) {
-            console.log(err)
-          }
         })
       }
     }
