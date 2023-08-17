@@ -4,6 +4,11 @@ const enrichPerson = require('../util/enrich_util');
 const router = express.Router();
 
 router.post('/person', async (req, res) => {
+    if (req.socket.remoteAddress !== '::1' && req.socket.remoteAddress.replace(/^.*:/, '') !== '127.0.0.1') {
+        res.sendStatus(403);
+        return;
+    }
+
     if (process.env.ENRICHMENT !== 'true') {
         res.sendStatus(200);
         return;
