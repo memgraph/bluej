@@ -12,14 +12,65 @@ const agent = new BskyAgent({
 
 const graphNS = new RepoNS(agent.api);
 
+const verbose = false;
+
 let errorList: any[] = [];
 let iterationTimes: any[] = [];
-let doneUserFollows: string[] = [];
-let doneUserLikes: string[] = [];
 
 async function updateRelationships(type: string){
-    let relationshipList: any[] = [];
     let firstCalled = Date.now();
+    let running = true;
+    let numberOfUpdated = 0;
+    let numberOfCalls = 0;
+    let numberOfErrors = 0;
+    let waitingTime = 0;
+
+    while(running){
+        let startIteration = Date.now();
+        let update = await updateRelationship(type, numberOfUpdated, numberOfCalls);
+        let endIteration = Date.now();
+        if(update.get("error") == 0){
+            numberOfUpdated = update.get("numberOfUpdated");
+            numberOfCalls = update.get("numberOfCalls");
+            if(verbose){
+                console.log("Number of updated users: " + numberOfUpdated);
+                console.log("Number of calls: " + numberOfCalls);
+                console.log("Waiting time: " + waitingTime);
+            }
+            iterationTimes.push([(endIteration.valueOf() - startIteration.valueOf()), update.get("numberOfCalls")])
+            waitingTime = calculateWaitingTime(numberOfCalls, (endIteration - firstCalled.valueOf()));
+            numberOfErrors = 0;
+            await delay(waitingTime)
+        } else {
+            if(numberOfErrors >= 5){
+                if(verbose){
+                    if(update.get("error") == 1){
+                        console.log("Wrong relationship type. Please try again!");
+                    } else if(update.get("error") == 2) {
+                        console.log("Couldn't load relationship. Please try again!");
+                    } else if(update.get("error") == 3){
+                        console.log("Couldn't load users relationships.")
+                    }
+                }
+                running = false;
+                return (Date.now().valueOf() - firstCalled.valueOf());
+            }
+            numberOfErrors += 1;
+        }
+
+        if(running){
+            if((Date.now().valueOf() - startIteration) > (5 * 60 * 1000)){
+                console.log("Finished 5 min iteration");
+                running = false;
+                return 0;
+            }
+        }
+    }
+}
+
+async function updateRelationship(type: string, numberOfUpdated: number, numberOfCalls: number){
+    let relationshipList: any[] = [];
+    let relationship: any[] = [];
 
     let query = "";
     if(type == "FOLLOW"){
@@ -27,118 +78,88 @@ async function updateRelationships(type: string){
     } else if(type == "LIKE") {
         query = "MATCH (p1:Person)-[r:LIKE]->(p2:Post)";
     } else {
-        console.log("Wrong relationship type. Please try again!")
+        return new Map<string, number>([
+            ["error", 1]
+        ])
+    }
+
+    try {
+        const session = driver.session();
+        let list = await session.run(query + "WHERE r.uri IS NULL RETURN p1, r, p2 LIMIT 1");
+        Array.prototype.push.apply(relationship, list.records);
+        session.close()
+    } catch (err) {
+        errorList.push(["gettingRelationshipUser", err]);
+        console.error('[gettingRelationshipUser]:', err);
+    }
+
+    if(relationship === undefined || relationship === null || relationship.length !== 1){
         return new Map<string, number>([
             ["error", 2]
         ])
     }
 
-    try {
-        const session = driver.session();
-        let list = await session.run(query + "WHERE r.uri IS NULL RETURN p1, r, p2 LIMIT 5000");
-        Array.prototype.push.apply(relationshipList, list.records);
-        session.close()
-    } catch (err) {
-        errorList.push(["gettingRelationship", err]);
-        console.error('[gettingRelationship]:', err);
-    }
-
-    iterationTimes = [];
-    if(relationshipList === undefined || relationshipList === null || relationshipList.length === 0){
-        console.log("Couldn't load relationship list. Please try again!")
-        return new Map<string, number>([
-            ["error", 1]
-        ])
-    } else {
-        let updatedRelationshipList = await updateRelationship(type, relationshipList, firstCalled, 0, 0, 0);
-    }
-}
-
-async function updateRelationship(type: string, relationshipList: any[], firstCalled: number, numberOfCalls: number, waitingTime: number, numberOfUpdated: number){
-    if(relationshipList.length === 0){
-        return [];
-    }
-
-    let startIteration = Date.now(); //Time of updating 5 users
-    let lookingRel = relationshipList.pop(); //List containing only dids for easier use
-
-    let rel = new Map<string, any>([
-        ["node1", lookingRel["_fields"][0]],
-        ["relationship", lookingRel["_fields"][1]],
-        ["node2", lookingRel["_fields"][2]]
-    ]);
-
-    let actorDid = rel.get("node1")["properties"]["did"].toString()
-    if(type == "FOLLOW"){
-        if(!doneUserFollows.includes(actorDid)){
-            doneUserFollows.push(actorDid);         
-        }
-    } else if (type == "LIKE"){
-        if(!doneUserLikes.includes(actorDid)){
-            doneUserLikes.push(actorDid);
-        }
-    }
-    let oneUserInfo = await fetchRecords(type, actorDid);
-    numberOfCalls += oneUserInfo.numberOfCalls
-    if(oneUserInfo != undefined && oneUserInfo != null){
-        while(oneUserInfo?.returnList.length > 0){
-            let lookingList: any[] = [];
-            for(let i=0; i < 10; i++){
-                if(oneUserInfo.returnList.length > 0){
-                    lookingList.push(oneUserInfo.returnList.pop());
-                }
-            }
+    let actorDid = relationship[0]["_fields"][0]["properties"]["did"];
+    let state = true;
+    let numOfPass = 0;
+    let limit = 3000;
+    while (state){
+        try {
             const session = driver.session();
-            const promises = lookingList.map(async (record) => {
-                let saveValues = await saveOneToDb(type, record, actorDid, session);
-                if(saveValues) numberOfUpdated += 1;
+            const parameters = {
+                did: actorDid,
+                skip: (numOfPass * limit)
+            };
+            let que = "";
+            if(parameters.skip == 0){
+                que = query + `WHERE p1.did = $did RETURN p2 LIMIT ${limit}`
+            }
+            else {
+                que = query + `WHERE p1.did = $did RETURN p2 SKIP ${parameters.skip} LIMIT ${limit}`
+            }
+            let list = await session.run(que, parameters);
+            list.records.forEach(async (record) => {
+                if(type == "FOLLOW") relationshipList.push(record["_fields"][0]["properties"]["did"]);
+                else if (type == "LIKE") relationshipList.push(record["_fields"][0]["properties"]["uri"])
             });
-            await Promise.all(promises);
-            session.close();
+            numOfPass += 1;
+            if(list.records.length < limit){
+                state = false;
+            }
+            session.close()
+        } catch (err) {
+            errorList.push(["gettingRelationshipUser", err]);
+            console.error('[gettingRelationshipUser]:', err);
+            state = false;
         }
     }
 
-    let endIteration = Date.now(); //Time of end for updating 5 users
-    let durationOfIteration = endIteration.valueOf() - startIteration.valueOf() //How long did update of 5 users take
-    let durationOfRun = endIteration.valueOf() - firstCalled.valueOf(); //How long is updating whole list taking
+    let updatedRelationshipValue = await updateOneUser(type, actorDid, relationshipList);
 
-    iterationTimes.push([durationOfIteration, numberOfCalls]);
-
-    console.log("Updated: " + numberOfUpdated)
-
-    if((endIteration.valueOf() - firstCalled) > (5 * 60 * 1000)){
-        console.log("Finished 5 min iteration");
-        return relationshipList;
-    }
-
-    waitingTime = calculateWaitingTime(numberOfCalls, durationOfRun);
-
-    console.log("Waiting time: " + waitingTime)
-
-    await delay(waitingTime);
-    return await updateRelationship(type, relationshipList, firstCalled, numberOfCalls, waitingTime, numberOfUpdated);
+    return new Map<string, any>([
+        ["error", 0],
+        ["numberOfUpdated", (updatedRelationshipValue.numberOfUpdated + numberOfUpdated)],
+        ["numberOfCalls", (updatedRelationshipValue.numberOfCalls + numberOfCalls)]
+    ]);
 }
 
-async function saveOneToDb(type: string, record: any, actorDid: string, session: any){
-    let node2 = "";
+async function saveOneToDb(type: string, record: any, actorDid: string){
     let cypher = "";
     let state = false;
 
     if(type == "FOLLOW"){
-        node2 = record["value"]["subject"];
         cypher = `MATCH (p1:Person {did: $did1})-[r:FOLLOW]->(p2:Person {did: $did2}) SET `;
     }
     else if(type == "LIKE"){
-        node2 = record["value"]["subject"]["uri"];
         cypher = `MATCH (p1:Person {did: $did1})-[r:LIKE]->(p2:Post {uri: $did2}) SET `;
     }
-
+    
     try {
         const session = driver.session();
         const parameters = {
             did1: actorDid,
-            did2: node2,
-            uri: record["uri"] || ""
+            did2: record.subject,
+            uri: record.relationshipUri || ""
         };
 
         const setClauses = Object.entries(parameters)
@@ -157,41 +178,133 @@ async function saveOneToDb(type: string, record: any, actorDid: string, session:
     }
     return state;
 }
+async function deleteUnreachable(type: string, relationshipList: any[], actorDid: string){
+    let cypher = "";
+    let state = false;
 
-async function fetchRecords(type: string, actorDid: string){
+    if(type == "FOLLOW"){
+        cypher = `MATCH (p1:Person {did: $did1})-[r:FOLLOW]->(p2:Person {did: $did2}) DELETE r `;
+    }
+    else if(type == "LIKE"){
+        cypher = `MATCH (p1:Person {did: $did1})-[r:LIKE]->(p2:Post {uri: $did2}) DELETE r `;
+    }
+
+    for(let subjectDid of relationshipList){
+        if(verbose) console.log("Deleting: " + subjectDid);
+        try {
+            const session = driver.session();
+            const parameters = {
+                did1: actorDid,
+                did2: subjectDid,
+            };
+    
+            const result = await session.run(cypher, parameters);
+            session.close();
+            state = true;
+        } catch (err) {
+            errorList.push(["saveToDb", err, subjectDid]);
+            console.error('[saveToDb]:', err);
+        }
+    }
+
+    return state;
+}
+async function deleteUnexistingUser(type: string, actorDid: string){
+    let cypher = `MATCH (p1:Person {did: $did1}) DELETE p1 `;
+    let state = false;
+
+    if(verbose) console.log("Deleting User: " + actorDid);
+    try {
+        const session = driver.session();
+        const parameters = {
+            did1: actorDid,
+        };
+
+        const result = await session.run(cypher, parameters);
+        session.close();
+        state = true;
+    } catch (err) {
+        errorList.push(["saveToDb", err, actorDid]);
+        console.error('[saveToDb]:', err);
+    }
+    return state;
+}
+
+async function updateOneUser(type: string, actorDid: string, relationshipList: any[]){
+    let startIteration = Date.now();
     let cursor: string | undefined = "";
     let numberOfCalls = 0;
     let state = true;
-    let returnList: any[] = [];
     let collection = (type == "FOLLOW") ? "app.bsky.graph.follow" : "app.bsky.feed.like";
+    let numberOfUpdated = 0;
 
     let numberOfErrors = 0;
 
     while(state){
+        let apiList: any[] = [];
+        let saveList: any[] = [];
         try {
             //Follow collection: "app.bsky.graph.follow";
             //Like collection: "app.bsky.feed.like"
             let profile = await graphNS.listRecords({repo: actorDid, collection: collection, limit: 100, cursor: cursor});
             profile.data.records.forEach(async (record) => {
-                returnList.push(record);
+                if(type == "FOLLOW"){
+                    apiList.push({relationshipUri: record.uri, subject: record.value["subject"]})
+                } else if (type == "LIKE"){
+                    apiList.push({relationshipUri: record.uri, subject: record.value["subject"]["uri"]})
+                }
             });
             cursor = profile.data.cursor;
             numberOfCalls += 1;
             numberOfErrors = 0;
+            apiList.forEach(async (item) => {
+                if(relationshipList.includes(item.subject)){
+                    let index = relationshipList.indexOf(item.subject);
+                    relationshipList.splice(index, 1);
+                    saveList.push(item);
+                }
+            });
             if(profile.data.records.length < 100){
                 state = false;
             }
-            //state = false;
         } catch (err) {
             errorList.push(["fetchFollow", err]);
             console.error('[fetchFollow]:', err);
             numberOfErrors += 1;
         }
+
+        if(relationshipList.length == 0){
+            state = false;
+        } else {
+            if(!state){
+                await deleteUnreachable(type, relationshipList, actorDid);
+                return {error: 1, numberOfCalls: numberOfCalls, numberOfUpdated: numberOfUpdated};;
+            }
+        }
         if(numberOfErrors >= 5){
             state = false;
+            await deleteUnexistingUser(type, actorDid);
+            return {error: 1, numberOfCalls: numberOfCalls, numberOfUpdated: numberOfUpdated};;
+        }
+
+        while(saveList.length > 0){
+            let lookingList: any[] = [];
+            for(let i=0; i < 10; i++){
+                if(saveList.length > 0){
+                    lookingList.push(saveList.pop());
+                }
+            }
+            const session = driver.session();
+            const promises = lookingList.map(async (record) => {
+                let saveValues = await saveOneToDb(type, record, actorDid);
+                if(saveValues) numberOfUpdated += 1;
+            });
+            await Promise.all(promises);
+            session.close();
         }
     }
-    return {numberOfCalls: numberOfCalls, returnList: returnList}
+    
+    return {error: 0, numberOfCalls: numberOfCalls, numberOfUpdated: numberOfUpdated};
 }
 
 function calculateWaitingTime(numberOfCalls: number, durationOfRun: number){
@@ -203,11 +316,6 @@ function calculateWaitingTime(numberOfCalls: number, durationOfRun: number){
     let possibleRemainingCalls = (((5*60*1000)-durationOfRun) / average);
 
     let waitingTime = 0;
-
-    console.log(iterationTimes)
-    console.log("Average: " + average);
-    console.log(possibleRemainingCalls);
-
 
     if((possibleRemainingCalls + numberOfCalls) > 2950){
         waitingTime = ((5*60*1000) / 2950) - average
@@ -224,9 +332,32 @@ async function run(){
     await agent.login({ identifier: <string>process.env.FEEDGEN_HANDLE, password: <string>process.env.FEEDGEN_PASSWORD });
     console.log("Started script for follow and like");
     console.log("Updating follow relationships...");
-    await updateRelationships("FOLLOW");
-    //console.log("Updating like relationships...");
-    //await allRelationships("L");
+
+    let remaining = 0;
+    while(remaining == 0){
+        let ret = await updateRelationships("FOLLOW");
+        if(ret != undefined && ret != null){
+            remaining = ret;
+            if(remaining != 0){
+                if(verbose) console.log("Cooling off for: " + remaining);
+                await delay(remaining);
+            }
+        }
+        await delay(5000);
+    }
+    remaining = 0;
+    console.log("Updating like relationships...");
+    while(remaining == 0){
+        let ret = await updateRelationships("LIKE");
+        if(ret != undefined && ret != null){
+            remaining = ret;
+            if(remaining != 0){
+                console.log("Cooling off for: " + remaining);
+                await delay(remaining);
+            }
+        }
+        await delay(5000);
+    }
     process.exit(1);
 }
 

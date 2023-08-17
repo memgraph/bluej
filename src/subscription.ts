@@ -162,12 +162,24 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.follows.deletes.length > 0) {
       for (const follow of ops.follows.deletes) {
         if (verbose) process.stdout.write('F')
-        //FIXME the record only contains a URI without a source -> dest DID mapping. There is a URI in the at:// uri, but no destination is specificed
-        // So not sure yet how to delete the follow relationship in a graph 
-        //{
-        //  uri: 'at://did:plc:oftvwqwimefeuzes4nwinubh/app.bsky.graph.follow/3jvcsau7em22q'
-        //}
-        //process.stdout.write(util.inspect(follow, false, null, true))
+        const result = await this.executeQuery("MATCH (f:FOLLOW {uri: $uri}) DETACH DELETE f;", {
+          uri: follow.uri
+        })
+
+        fetch(apiAddress + '/delete', {
+          method: "POST",
+          body: JSON.stringify({
+            type: 'follow', 
+            uri: follow.uri
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8"
+          }
+        }).catch((err) => {
+          if (verbose) {
+            console.log(err)
+          }
+        })
       }
     }
     if (ops.follows.creates.length > 0) {
@@ -198,7 +210,24 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.likes.deletes.length > 0) {
       for (const like of ops.likes.deletes) {
         if (verbose) process.stdout.write('L')
-        //FIXME sane situation as with follows.delete, just a URI and not a full source -> dest mapping
+        const result = await this.executeQuery("MATCH (l:LIKE {uri: $uri}) DETACH DELETE l;", {
+          uri: like.uri
+        })
+
+        fetch(apiAddress + '/delete', {
+          method: "POST",
+          body: JSON.stringify({
+            type: 'like', 
+            uri: like.uri
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8"
+          }
+        }).catch((err) => {
+          if (verbose) {
+            console.log(err)
+          }
+        })
       }
     }
     if (ops.likes.creates.length > 0) {
