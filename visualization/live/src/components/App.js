@@ -589,6 +589,16 @@ function App({socket}) {
                     }
                 }
 
+                let repostNode = nodes[msg.source];
+
+                if (repostNode && !repostNode?.repostUri) {
+                    repostNode.repostUri = msg.target;
+                    setNodes(previous => ({
+                        ...previous,
+                        [msg.source]: repostNode
+                    }));
+                }
+
                 setLinks(previous => ({
                     ...previous,
                     [msg.source + ' ' + msg.type + ' ' + msg.target]: {
@@ -775,7 +785,7 @@ function App({socket}) {
                 <Divider/>
                 {Object.keys(nodeColorScheme).map(key => {
                     return (
-                        <div className='legendItem'>
+                        <div className='legendItem' key={key}>
                             <SquareIcon sx={{color: nodeColorScheme[key]}}/>
                             <div>
                                 {nodeGroupNames[key]}
