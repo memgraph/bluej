@@ -1,5 +1,6 @@
 #include <mgp.hpp>
 #include <curl/curl.h>
+#include <thread>
 #include <string>
 #include "json.hpp"
 
@@ -211,25 +212,17 @@ void delete_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
   }
 }
 
-void enrich_person(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::memory = memory;
-  const auto arguments = mgp::List(args);
-  auto result = mgp::Result(res);
-
+void execute_enrich_person(std::string did) {
   try {
-    const std::string did = std::string(arguments[0].ValueString());
     nlohmann::json json;
-    
     json["did"] = did;
     const std::string json_data = json.dump();
 
     CURL *curl;
-    CURLcode response_code;
     
     curl = curl_easy_init();
 
     if (curl == NULL) {
-      result.SetErrorMessage("Unable to create CURL handle.");
       return;
     }
 
@@ -243,15 +236,26 @@ void enrich_person(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, 
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
 
-    response_code = curl_easy_perform(curl);
-
-    if (response_code == CURLE_OK) {
-      result.SetValue(json_data);
-    } else {
-      result.SetErrorMessage(curl_easy_strerror(response_code));
-    }
-
+    curl_easy_perform(curl);
+    
     curl_easy_cleanup(curl);
+  } catch (const std::exception &e) {
+    return;
+  }
+}
+
+void enrich_person(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
+  mgp::memory = memory;
+  const auto arguments = mgp::List(args);
+  auto result = mgp::Result(res);
+
+  try {
+    const std::string did = std::string(arguments[0].ValueString());
+
+    std::thread t(execute_enrich_person, did);
+    t.detach();
+
+    result.SetValue(did);
   } catch (const std::exception &e) {
     result.SetErrorMessage(e.what());
     return;
