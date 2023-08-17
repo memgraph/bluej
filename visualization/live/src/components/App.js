@@ -395,7 +395,9 @@ function App({socket}) {
                 let rootExists = nodes[msg.target] !== undefined;
                 let nodeExists = nodes[msg.source] !== undefined;
 
-                if ((!rootExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
+                let nonExistingCount = rootExists + nodeExists;
+
+                if ((!rootExists || !nodeExists) && Object.keys(nodes).length > maxNodes - nonExistingCount) {
                     return;
                 }
 
@@ -429,7 +431,9 @@ function App({socket}) {
                 let parentExists = nodes[msg.target] !== undefined;
                 let nodeExists = nodes[msg.source] !== undefined;
 
-                if ((!parentExists || !nodeExists) && Object.keys(nodes).length >= maxNodes) {
+                let nonExistingCount = parentExists + nodeExists;
+
+                if ((!parentExists || !nodeExists) && Object.keys(nodes).length > maxNodes - nonExistingCount) {
                     return;
                 }
 
@@ -463,7 +467,9 @@ function App({socket}) {
                 let p1Exists = nodes[msg.source] !== undefined;
                 let p2Exists = nodes[msg.target] !== undefined;
 
-                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length >= maxNodes) {
+                let nonExistingCount = p1Exists + p2Exists;
+
+                if ((!p1Exists || !p2Exists) && Object.keys(nodes).length > maxNodes - nonExistingCount) {
                     return;
                 }
 
@@ -496,8 +502,10 @@ function App({socket}) {
             } else if (msg.type === 'LIKE') {
                 let personExists = nodes[msg.source] !== undefined;
                 let postExists = nodes[msg.target] !== undefined;
+
+                let nonExistingCount = personExists + postExists;
                 
-                if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
+                if ((!personExists || !postExists) && Object.keys(nodes).length > maxNodes - nonExistingCount) {
                     return;
                 }
 
@@ -530,8 +538,10 @@ function App({socket}) {
             } else if (msg.type === 'AUTHOR_OF') {
                 let personExists = nodes[msg.source] !== undefined;
                 let postExists = nodes[msg.target] !== undefined;
+
+                let nonExistingCount = personExists + postExists;
                 
-                if ((!personExists || !postExists) && Object.keys(nodes).length >= maxNodes) {
+                if ((!personExists || !postExists) && Object.keys(nodes).length > maxNodes - nonExistingCount) {
                     return;
                 }
 
@@ -565,7 +575,9 @@ function App({socket}) {
                 let repostExists = nodes[msg.source] !== undefined;
                 let originalPostExists = nodes[msg.target] !== undefined;
 
-                if ((!repostExists || !originalPostExists) && Object.keys(nodes).length >= maxNodes) {
+                let nonExistingCount = repostExists + originalPostExists;
+
+                if ((!repostExists || !originalPostExists) && Object.keys(nodes).length > maxNodes - nonExistingCount) {
                     return;
                 }
 
