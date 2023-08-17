@@ -82,9 +82,10 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.follows.creates.length > 0) {
       for (const follow of ops.follows.creates) {
         if (verbose) process.stdout.write('f')
-        await this.executeQuery("MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW {weight: 2}]->(p2)", {
+        await this.executeQuery("MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW {weight: 2, uri: $uri}]->(p2)", {
           authorDid: follow.author,
-          subjectDid: follow.record.subject
+          subjectDid: follow.record.subject,
+          uri: follow.uri
         })
       }
     }
@@ -99,9 +100,10 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.likes.creates.length > 0) {
       for (const like of ops.likes.creates) {
         if (verbose) process.stdout.write('l')
-        await this.executeQuery("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", {
+        await this.executeQuery("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1, uri: $uri}]->(post)", {
           authorDid: like.author,
-          postUri: like.record.subject.uri
+          postUri: like.record.subject.uri,
+          uri: like.uri
         })
       }
     }
