@@ -125,17 +125,16 @@ function App({socket}) {
         setSelectedDescActive(false);
 
         setSelectedNode(null);
-        setSelectedNodes(new Set());
-        setSelectedLinks(new Set());
-
-        setNodes(previous => {
-            return {
-                ...previous
-            };
-        });
-    }, [currTimeout]);
+        selectedNodes.clear();
+        selectedLinks.clear();
+        updateSelected();
+    }, [selectedNodes, selectedLinks, currTimeout, updateSelected]);
 
     const handleClick = useCallback(node => {
+        if (node.id && !node.info) {
+            socket.emit('info', node.id);
+        }
+
         if (node.x === 0 && node.y === 0 && node.z === 0) {
             fgRef.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
         } else {
@@ -166,9 +165,9 @@ function App({socket}) {
         setCurrTimeout(setTimeout(() => {
             setSelectedDescActive(true);
         }, animationTime));
-    }, [fgRef, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
+    }, [fgRef, links, selectedNodes, selectedLinks, socket, updateSelected, clearSelected]);
 
-    const updateHighlight = () => {
+    const updateHighlight = useCallback(() => {
         setHighlightNodes(new Set(highlightNodes));
         setHighlightLinks(new Set(highlightLinks));
 
@@ -177,19 +176,14 @@ function App({socket}) {
                 ...previous
             };
         });
-    };
+    }, [highlightNodes, highlightLinks]);
 
-    const clearHighlight = () => {
+    const clearHighlight = useCallback(() => {
         setHighlightNode(null);
-        setHighlightNodes(new Set());
-        setHighlightLinks(new Set());
-
-        setNodes(previous => {
-            return {
-                ...previous
-            };
-        });
-    }
+        highlightNodes.clear();
+        highlightLinks.clear();
+        updateHighlight();
+    }, [highlightNodes, highlightLinks, updateHighlight]);
 
     const handleNodeHover = node => {
         highlightNodes.clear();
@@ -255,7 +249,7 @@ function App({socket}) {
         }
 
         setAnimation(!disabled);
-    }, [clearSelected]);
+    }, [clearSelected, clearHighlight]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -670,6 +664,18 @@ function App({socket}) {
                 };
             });
         }
+
+        const onInfo = msg => {
+            let node = nodes[msg.id];
+
+            if (node) {
+                node.info = msg.info;
+                setNodes(previous => ({
+                    ...previous,
+                    [msg.id]: node
+                }));
+            }
+        }
         
         const onInterest = msg => {
             clear(false);
@@ -708,6 +714,7 @@ function App({socket}) {
         socket.on('merge', onMerge);
         socket.on('delete', onDelete);
         socket.on('detach', onDetach);
+        socket.on('info', onInfo);
         socket.on(eventName, onInterest);
 
         return () => {
@@ -715,6 +722,7 @@ function App({socket}) {
             socket.off('merge', onMerge);
             socket.off('delete', onDelete);
             socket.off('detach', onDetach);
+            socket.off('info', onInfo);
             socket.off(eventName, onInterest);
         };
     }, [nodes, links, maxNodes, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestHandle, socket, clear]);
@@ -810,8 +818,7 @@ function App({socket}) {
             <div className='nodeInfo'>
                 <div className='infoTitle'>
                     {
-                        selectedNode.id.startsWith('did') ? 
-                            'Person' : 'Post'
+                        selectedNode.id.startsWith('at') ? selectedNode?.repostUri ? 'Repost' : 'Post' : 'Person'
                     }
                     <div className='exit' onClick={clearSelected}/>
                 </div>
@@ -820,7 +827,26 @@ function App({socket}) {
                     selectedNode.id.startsWith('did') ? 
                         <div className='nodeInfoBody'> 
                             <div className='nodeInfoList'>
-                                ID: {selectedNode.id}
+                                { selectedNode.info ? 
+                                    <div>
+                                        {
+                                            Object.entries(selectedNode.info).map(([key, value]) => {
+                                                return (
+                                                    <div key={key}>
+                                                        <div className='infoName'>{key}</div> 
+                                                        <div>{value}</div>
+                                                    </div>
+                                                )
+                                            })
+                                        }
+                                    </div> :
+                                    <div>
+                                        <div>
+                                            <div className='infoName'>ID</div> 
+                                            <div>{selectedNode.id}</div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                             <Divider/>
                             <Link 
@@ -839,9 +865,30 @@ function App({socket}) {
                     selectedNode.text ? 
                         <div className='nodeInfoBody'> 
                             <div className='nodeInfoList'>
-                                ID: {selectedNode.id}
-                                <br/>
-                                Text: {selectedNode.text}
+                                { selectedNode.info ? 
+                                    <div>
+                                        {
+                                            Object.entries(selectedNode.info).map(([key, value]) => {
+                                                return (
+                                                    <div key={key}>
+                                                        <div className='infoName'>{key}</div> 
+                                                        <div>{value}</div>
+                                                    </div>
+                                                )
+                                            })
+                                        }
+                                    </div> :
+                                    <div>
+                                        <div>
+                                            <div className='infoName'>ID</div> 
+                                            <div>{selectedNode.id}</div>
+                                        </div>
+                                        <div>
+                                            <div className='infoName'>Text</div> 
+                                            <div>{selectedNode.text}</div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                             <Divider/>
                             <Link 
@@ -860,9 +907,30 @@ function App({socket}) {
                     selectedNode.repostUri ? 
                         <div className='nodeInfoBody'> 
                             <div className='nodeInfoList'>
-                                ID: {selectedNode.id}
-                                <br/>
-                                Original post ID: {selectedNode.repostUri}
+                                { selectedNode.info ? 
+                                    <div>
+                                        {
+                                            Object.entries(selectedNode.info).map(([key, value]) => {
+                                                return (
+                                                    <div key={key}>
+                                                        <div className='infoName'>{key}</div>
+                                                        <div>{value}</div>
+                                                    </div>
+                                                )
+                                            })
+                                        }
+                                    </div> :
+                                    <div>
+                                        <div>
+                                            <div className='infoName'>ID</div> 
+                                            <div>{selectedNode.id}</div>
+                                        </div>
+                                        <div>
+                                            <div className='infoName'>Original post ID</div> 
+                                            <div>{selectedNode.repostUri}</div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                             <Divider/>
                             <Link 
@@ -880,7 +948,26 @@ function App({socket}) {
                         </div> :
                     <div className='nodeInfoBody'> 
                         <div className='nodeInfoList'>
-                            ID: {selectedNode.id}
+                            { selectedNode.info ? 
+                                <div>
+                                    {
+                                        Object.entries(selectedNode.info).map(([key, value]) => {
+                                            return (
+                                                <div key={key}>
+                                                    <div className='infoName'>{key}</div>
+                                                    <div>{value}</div>
+                                                </div>
+                                            )
+                                        })
+                                    }
+                                </div> :
+                                <div>
+                                    <div>
+                                        <div className='infoName'>ID</div> 
+                                        <div>{selectedNode.id}</div>
+                                    </div>
+                                </div>
+                            }
                         </div>
                         <Divider/>
                         <Link 
@@ -941,9 +1028,9 @@ function App({socket}) {
                 linkDirectionalParticleWidth={5}
                 linkDirectionalParticleSpeed={0.025}
 
-                onNodeClick={animation && handleClick}
-                onNodeHover={animation && handleNodeHover}
-                onLinkHover={animation && handleLinkHover}
+                onNodeClick={animation ? handleClick : () => {}}
+                onNodeHover={animation ? handleNodeHover : () => {}}
+                onLinkHover={animation ? handleLinkHover : () => {}}
 
                 forceEngine='d3'
                 d3AlphaDecay={highlighted ? 1 : 0}

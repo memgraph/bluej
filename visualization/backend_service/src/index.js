@@ -15,7 +15,9 @@ const agent = new BskyAgent({
 const app = express();
 
 const server = app.listen(parseInt(process.env.PORT), () => {
-    console.log(`App listening on port ${process.env.PORT}.`);
+    if (process.env.VERBOSE === 'true') {
+        console.log(`App listening on port ${process.env.PORT}.`);
+    }
 });
 
 const io = new Server(server, {
@@ -28,13 +30,17 @@ const sockets = {};
 const clientInterests = {};
 
 io.on('connection', (socket) => {
-    console.log('\nUser connected.');
+    if (process.env.VERBOSE === 'true') {
+        console.log('\nUser connected.');
+    }
 
     sockets[socket.id] = socket;
 
     socket.on('interest', async (clientInterest) => {
         if (clientInterest !== '') {
-            console.log('Client is interested in handle: ' + clientInterest);
+            if (process.env.VERBOSE === 'true') {
+                console.log('Client is interested in handle: ' + clientInterest);
+            }
 
             const session = driver.session();
     
@@ -122,10 +128,90 @@ io.on('connection', (socket) => {
                 delete clientInterests[socket.id];
             }
         }
-    })
+    });
+
+    socket.on('info', async (id) => {
+        if (!id || id === '') {
+            return;
+        }
+
+        if (process.env.VERBOSE === 'true') {
+            console.log('Client is interested in info about ID: ' + id);
+        }
+
+        const info = {};
+        const session = driver.session();
+
+        try {
+            if (id.startsWith('did')) {
+                const result = await session.run(`MATCH (p:Person {did: "${id}"}) RETURN p;`);
+                const resultProperties = result.records[0]?._fields[0]?.properties;
+
+                if (resultProperties?.displayName) {
+                    info['Display name'] = resultProperties.displayName;
+                }
+
+                if (resultProperties?.handle) {
+                    info['Handle'] = resultProperties.handle;
+                }
+
+                if (resultProperties?.description) {
+                    info['Description'] = resultProperties.description;
+                }
+
+                if (resultProperties?.followersCount >= 0) {
+                    info['Followers'] = resultProperties.followersCount;
+                }
+
+                if (resultProperties?.followsCount >= 0) {
+                    info['Following'] = resultProperties.followsCount;
+                }
+            } else {
+                const result = await session.run(`MATCH (p:Post {uri: "${id}"}) RETURN p;`);
+                const resultProperties = result.records[0]?._fields[0]?.properties;
+
+                if (resultProperties?.text) {
+                    info['Text'] = resultProperties.text;
+                }
+
+                if (resultProperties?.repostUri) {
+                    const originalResult = await session.run(`MATCH (p:Post {uri: "${resultProperties.repostUri}"}) RETURN p.text;`);
+                    const originalText = originalResult.records[0]?._fields[0];
+
+                    if (originalText) {
+                        info['Original post text'] = originalText;
+                    }
+                }
+
+                if (resultProperties?.author) {
+                    const author = await session.run(`MATCH (p:Person {did: "${resultProperties.author}"}) RETURN p.handle;`);
+                    const authorHandle = author.records[0]?._fields[0];
+
+                    if (authorHandle) {
+                        info['Author'] = authorHandle;
+                    }
+                }
+
+                if (resultProperties?.createdAt) {
+                    let splitDate = resultProperties.createdAt.substring(0, 10).split('-');
+                    let dateTime = `${resultProperties.createdAt.substring(11, 16)}, ${splitDate[2]}.${splitDate[1]}.${splitDate[0]}.`;
+                    info['Created at'] = dateTime;
+                }
+            }
+        } finally {
+            await session.close();
+        }
+
+        if (Object.keys(info).length > 0) {
+            const package = {id, info};
+            socket.emit('info', package);
+        }
+    });
 
     socket.on('disconnect', () => {
-        console.log('\nUser disconnected.');
+        if (process.env.VERBOSE === 'true') {
+            console.log('\nUser disconnected.');
+        }
 
         delete sockets[socket.id];
 
