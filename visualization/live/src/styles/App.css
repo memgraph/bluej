@@ -10,8 +10,7 @@
     padding: 10px;
     display: flex;
     flex-direction: column;
-    max-width: 750px;
-    min-width: 250px;
+    width: 350px;
     overflow-wrap: break-word;
 }
 
@@ -34,6 +33,10 @@
     color: #ED6C02;
     margin-top: 10px;
     margin-bottom: 5px;
+}
+
+.noInfo {
+    margin-top: 10px;
 }
 
 .exit {

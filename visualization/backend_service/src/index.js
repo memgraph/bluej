@@ -10,7 +10,23 @@ const agent = new BskyAgent({
     service: 'https://bsky.social/',
 });
 
-(async () => await agent.login({ identifier: process.env.HANDLE, password: process.env.PASSWORD }))();
+const login_bluesky = async () => {
+    try {
+        await agent.login({ identifier: process.env.HANDLE, password: process.env.PASSWORD });
+
+        if (process.env.VERBOSE === 'true') {
+            console.log('Connected to Bluesky agent.');
+        }
+    } catch (err) {
+        if (process.env.VERBOSE === 'true') {
+            console.log('Failed to connect to Bluesky agent. Trying again in 10 seconds...');
+        }
+
+        setTimeout(() => login_bluesky(), 10000);
+    }
+}
+
+login_bluesky();
 
 const app = express();
 
@@ -37,7 +53,7 @@ io.on('connection', (socket) => {
     sockets[socket.id] = socket;
 
     socket.on('interest', async (clientInterest) => {
-        if (clientInterest !== '') {
+        if (clientInterest && clientInterest.match(/^([a-zA-Z0-9\.-]+)$/)) {
             if (process.env.VERBOSE === 'true') {
                 console.log('Client is interested in handle: ' + clientInterest);
             }
@@ -131,7 +147,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('info', async (id) => {
-        if (!id || id === '') {
+        if (!id || !id.match(/^([a-zA-Z0-9\.:\/]+)$/)) {
             return;
         }
 

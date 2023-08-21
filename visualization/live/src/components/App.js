@@ -840,11 +840,8 @@ function App({socket}) {
                                             })
                                         }
                                     </div> :
-                                    <div>
-                                        <div>
-                                            <div className='infoName'>ID</div> 
-                                            <div>{selectedNode.id}</div>
-                                        </div>
+                                    <div className='noInfo'>
+                                        No relevant information found.
                                     </div>
                                 }
                             </div>
@@ -878,15 +875,8 @@ function App({socket}) {
                                             })
                                         }
                                     </div> :
-                                    <div>
-                                        <div>
-                                            <div className='infoName'>ID</div> 
-                                            <div>{selectedNode.id}</div>
-                                        </div>
-                                        <div>
-                                            <div className='infoName'>Text</div> 
-                                            <div>{selectedNode.text}</div>
-                                        </div>
+                                    <div className='noInfo'>
+                                        No relevant information found.
                                     </div>
                                 }
                             </div>
@@ -920,15 +910,8 @@ function App({socket}) {
                                             })
                                         }
                                     </div> :
-                                    <div>
-                                        <div>
-                                            <div className='infoName'>ID</div> 
-                                            <div>{selectedNode.id}</div>
-                                        </div>
-                                        <div>
-                                            <div className='infoName'>Original post ID</div> 
-                                            <div>{selectedNode.repostUri}</div>
-                                        </div>
+                                    <div className='noInfo'>
+                                        No relevant information found.
                                     </div>
                                 }
                             </div>
@@ -961,11 +944,8 @@ function App({socket}) {
                                         })
                                     }
                                 </div> :
-                                <div>
-                                    <div>
-                                        <div className='infoName'>ID</div> 
-                                        <div>{selectedNode.id}</div>
-                                    </div>
+                                <div className='noInfo'>
+                                    No relevant information found.
                                 </div>
                             }
                         </div>
