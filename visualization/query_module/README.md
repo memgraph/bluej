@@ -1,3 +1,13 @@
+# Instructions on how to use the query module locally
+
+To use the query module locally, you will have to change one line in the visualization.cpp file.
+At the start of the file (line 12, 13), a variable called base_url is defined. It's used to send POST requests to the backend service. 
+
+In order to use the query module locally, you have to provide your own IP address (with port 3002 at the end of it, see example on line 12).
+Using localhost wouldn't work because the database is inside a Docker container, while the backend service is hosted outside of it.
+
+After modifying the visualization.cpp file, you have to build your query module and load it to Memgraph.
+
 # Instructions on how to build the Memgraph query module
 
 First run the following two commands to start running Memgraph Platform and setup a bash commandline which we will use for the next steps:
@@ -59,7 +69,7 @@ Now, the file visualization.so should exist in folder /mage/cpp/build/visualizat
   cp visualization.so /usr/lib/memgraph/query_modules
 ```
 
-To test if it works, run the following Cypher query in Memgraph Lab or mgconsole:
+To load the query module to Memgraph, run the following Cypher query in Memgraph Lab or mgconsole:
 
 ```
   CALL mg.load_all();
