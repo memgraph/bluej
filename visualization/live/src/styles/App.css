@@ -1,3 +1,7 @@
+.appContainer {
+    background-color: #71797E;
+}
+
 .nodeInfo {
     position: absolute;
     top: 50%;

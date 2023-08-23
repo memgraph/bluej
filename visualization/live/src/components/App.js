@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import ForceGraph2D from 'react-force-graph-2d';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
 import { TextField, InputAdornment, Button, Divider, Link, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
@@ -34,8 +35,10 @@ function App({socket}) {
 
     const [animation, setAnimation] = useState(true);
     const [coloring, setColoring] = useState(true);
+    const [is3D, setIs3D] = useState(true);
 
-    const fgRef = useRef();
+    const ref3D = useRef();
+    const ref2D = useRef();
     const animationTime = 2000;
 
     const nodeGroupNames = {
@@ -104,9 +107,14 @@ function App({socket}) {
         setHighlightLinks(new Set());
 
         if (resetCamera) {
-            fgRef.current.cameraPosition({x: 500, y: 500, z: 500}, null, animationTime);
+            if (is3D) {
+                ref3D.current.cameraPosition({x: 500, y: 500, z: 500}, null, animationTime);
+            } else {
+                ref2D.current.centerAt(0, 0, animationTime);
+                ref2D.current.zoom(1, animationTime);
+            }
         }
-    }, [currTimeout]);
+    }, [is3D, ref3D, ref2D, currTimeout]);
 
     const updateSelected = useCallback(() => {
         setSelectedNodes(new Set(selectedNodes));
@@ -135,12 +143,17 @@ function App({socket}) {
             socket.emit('info', node.id);
         }
 
-        if (node.x === 0 && node.y === 0 && node.z === 0) {
-            fgRef.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
+        if (is3D) {
+            if (node.x === 0 && node.y === 0 && node.z === 0) {
+                ref3D.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
+            } else {
+                const distance = 500;
+                const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                ref3D.current.cameraPosition({x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, animationTime);
+            }
         } else {
-            const distance = 500;
-            const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
-            fgRef.current.cameraPosition({x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, animationTime);
+            ref2D.current.centerAt(node.x, node.y, animationTime);
+            ref2D.current.zoom(2.5, animationTime);
         }
 
         clearSelected();
@@ -165,7 +178,7 @@ function App({socket}) {
         setCurrTimeout(setTimeout(() => {
             setSelectedDescActive(true);
         }, animationTime));
-    }, [fgRef, links, selectedNodes, selectedLinks, socket, updateSelected, clearSelected]);
+    }, [is3D, ref3D, ref2D, links, selectedNodes, selectedLinks, socket, updateSelected, clearSelected]);
 
     const updateHighlight = useCallback(() => {
         setHighlightNodes(new Set(highlightNodes));
@@ -249,6 +262,13 @@ function App({socket}) {
         }
 
         setAnimation(!disabled);
+    }, [clearSelected, clearHighlight]);
+
+    const handle3DChanged = useCallback((disabled) => {
+        clearSelected();
+        clearHighlight();
+
+        setIs3D(!disabled);
     }, [clearSelected, clearHighlight]);
 
     useEffect(() => {
@@ -728,7 +748,7 @@ function App({socket}) {
     }, [nodes, links, maxNodes, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestHandle, socket, clear]);
 
     return (
-        <>
+        <div className='appContainer'>
             <ToastContainer 
                 position='top-left'
                 autoClose={7500}
@@ -965,10 +985,11 @@ function App({socket}) {
                     </div>
                 }
             </div>}
+            {is3D ?
             <ForceGraph3D
                 graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
-                ref={fgRef}
+                ref={ref3D}
                 backgroundColor='#71797E'
                 showNavInfo={false}
 
@@ -1015,7 +1036,55 @@ function App({socket}) {
                 forceEngine='d3'
                 d3AlphaDecay={highlighted ? 1 : 0}
                 d3VelocityDecay={0.75}
-            />
+            /> : 
+            <ForceGraph2D
+                graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
+
+                ref={ref2D}
+                backgroundColor='#71797E'
+
+                width={windowSize[0]}
+                height={windowSize[1]}
+
+                nodeLabel={node => nodeGroupNames[node.group]}
+                nodeRelSize={10}
+                nodeColor={node => {
+                    if (!coloring) {
+                        return '#FFFFFF';
+                    }
+                    if (highlightNode === node || selectedNode === node) {
+                        return nodeColorScheme[3];
+                    }
+                    if (highlightNodes.has(node) || selectedNodes.has(node)) {
+                        return nodeColorScheme[4];
+                    }
+                    return nodeColorScheme[node.group];
+                }}
+
+                linkLabel='value'
+                linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
+                linkCurvature={0.25}
+                linkColor={link => {
+                    if (!coloring) {
+                        return '#FFFFFF';
+                    }
+                    return linkColorScheme[link.value];
+                }}
+
+                linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
+                linkDirectionalArrowRelPos={0.5}
+
+                linkDirectionalParticles={link => highlightLinks.has(link) || selectedLinks.has(link) ? 1 : 0}
+                linkDirectionalParticleWidth={5}
+                linkDirectionalParticleSpeed={0.025}
+
+                onNodeClick={animation ? handleClick : () => {}}
+                onNodeHover={animation ? handleNodeHover : () => {}}
+                onLinkHover={animation ? handleLinkHover : () => {}}
+
+                d3AlphaDecay={highlighted ? 1 : 0}
+                d3VelocityDecay={0.75}
+            />}
             <Accordion
                 sx={{
                     position: 'absolute',
@@ -1043,7 +1112,7 @@ function App({socket}) {
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        width: '600px'
+                        width: '750px'
                     }} 
                 >
                     <FormControl variant='outlined' sx={{ width: '150px'}}>
@@ -1067,9 +1136,12 @@ function App({socket}) {
                     <FormGroup>
                         <FormControlLabel control={<Checkbox color='secondary' onChange={(e) => setColoring(!e.target.checked)}/>} label='Disable coloring' labelPlacement='start'/>
                     </FormGroup>
+                    <FormGroup>
+                        <FormControlLabel control={<Checkbox color='warning' onChange={(e) => handle3DChanged(e.target.checked)}/>} label='Disable 3D view' labelPlacement='start'/>
+                    </FormGroup>
                 </AccordionDetails>
             </Accordion>
-        </>
+        </div>
     );
 };
 
