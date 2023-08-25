@@ -3,8 +3,8 @@
     top: 50%;
     left: 50%;
     transform: translate(50px, -50%);
-    background-color: #E0E0E0;
-    color: black;
+    background-color: #EEEEEE;
+    color: #000000;
     z-index: 1;
     border-radius: 10px;
     padding: 10px;
@@ -26,41 +26,11 @@
 
 .infoTitle {
     display: flex;
+    justify-content: space-between;
     font-weight: 500;
     font-size: 17.5px;
-}
-
-.exit {
-    box-sizing: border-box;
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    cursor: pointer;
-    display: block;
-    transform: scale(var(--ggs,1));
-    width: 22px;
-    height: 22px;
-    border: 2px solid transparent;
-    border-radius: 40px
-}
-
-.exit::after,
-.exit::before {
-    content: "";
-    display: block;
-    box-sizing: border-box;
-    position: absolute;
-    width: 16px;
-    height: 2px;
-    background: currentColor;
-    transform: rotate(45deg);
-    border-radius: 5px;
-    top: 8px;
-    left: 1px
-}
-
-.exit::after {
-    transform: rotate(-45deg)
+    color: #0066FF;
+    padding: 0 6px 6px 6px;
 }
 
 .legend {
@@ -112,9 +82,155 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 1;
-    background-color: #E0E0E0;
+    background-color: #ffffff;
     border-radius: 10px;
+    border: 1px solid #BBBBBB;
+    color: #0066FF;
     padding: 10px;
     font-size: 17.5px;
     text-align: center;
+    font-weight: bold
+}
+
+.loadingContainer {
+    width: 100%;
+    height: 100%;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.logoContainer {
+    width: 70%;
+    display: flex;
+    justify-content: space-between;
+}
+
+.loader {
+    margin-top: 40px;
+    border: 8px solid #f3f3f3; /* Light grey */
+    border-top: 8px solid #0066FF; /* Blue */
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.searchContainer {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    z-index: 1;
+    padding-top: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.clearSearchButton:hover {
+    color: #0066FF;
+}
+
+.drawerContainer {
+    z-index: 2;
+    height: calc(100% - 100px);
+    width: 370px;
+    margin: 0;
+    position: absolute;
+    right: 0px;
+    top: 70px;
+    overflow: hidden;
+    transition: width .5s cubic-bezier(0.820, 0.085, 0.395, 0.895);
+}
+
+.drawerContent {
+    height: 100%;
+    position: absolute;
+    right: 0;
+    display: flex;
+    align-items: flex-start;
+    transition: right .5s cubic-bezier(0.820, 0.085, 0.395, 0.895);
+}
+
+.drawerMenu {
+    height: 80%;
+    width: 300px;
+    min-height: 300px;
+    margin-top: 15px;
+    border-top: 2px solid #0066FF;
+    border-bottom: 2px solid #0066FF;
+    border-left: 2px solid #0066FF;
+    background-color: #ffffff;
+    border-radius: 0 0 0 15px;
+}
+
+.inactive {
+    right: -302px;
+}
+
+.smaller {
+    width: 70px;
+}
+
+.itemTitle {
+    display: flex;
+    align-items: center;
+    color: #0066FF;
+}
+
+.itemSettings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.itemText {
+    padding: 10px 0 0 30px;
+    margin: 0;
+}
+
+.itemColoring {
+    display: flex;
+    align-items: center;
+}
+
+.nodeColor {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-left: 25px;
+    margin-right: 10px;
+}
+
+.nodePerson {
+    background-color: #0066FF;
+    box-shadow: -2px 2px 4px 0px rgba(0, 0, 0, 0.25) inset;
+}
+
+.nodePost {
+    background-color: #474747;
+    box-shadow: -2px 2px 4px 0px rgba(255, 255, 255, 0.25) inset;
+}
+
+.nodeSelected {
+    background-color: #00C2FF;
+    box-shadow: -2px 2px 4px 0px rgba(0, 0, 0, 0.25) inset;
+}
+
+.nodeNeighbouring {
+    background-color: #A9A9A9;
+    box-shadow: -2px 2px 4px 0px rgba(0, 0, 0, 0.25) inset;
+}
+
+.aboutText {
+    margin: 10px 0 0 30px;
+    color: #A9A9A9;
 }
