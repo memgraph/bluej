@@ -1,4 +1,5 @@
-import { Driver, Session } from 'neo4j-driver'
+import { Driver, QueryResult } from 'neo4j-driver'
+import { Dict } from 'neo4j-driver-core/types/record'
 import { OutputSchema as RepoEvent, isCommit } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
 import { Database } from './db'
@@ -35,7 +36,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       for (const post of ops.posts.deletes) {
         if (verbose) process.stdout.write('P')
         try {
-          await this.executeQuery("MATCH (p:Post {uri: $uri}) DETACH DELETE p", {
+          await this.executeQuery("MATCH (p:Post {uri: $uri}) DETACH DELETE p;", {
             uri: post.uri
           })
         } catch (err) {
@@ -53,6 +54,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           text: post.record.text,
           createdAt: post.record.createdAt
         })
+
         const replyRoot = post.record?.reply?.root ? post.record.reply.root.uri : null
         const replyParent = post.record?.reply?.parent ? post.record.reply.parent.uri : null
         if (replyRoot) {
@@ -72,42 +74,43 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.follows.deletes.length > 0) {
       for (const follow of ops.follows.deletes) {
         if (verbose) process.stdout.write('F')
-        //FIXME the record only contains a URI without a source -> dest DID mapping. There is a URI in the at:// uri, but no destination is specificed
-        // So not sure yet how to delete the follow relationship in a graph 
-        //{
-        //  uri: 'at://did:plc:oftvwqwimefeuzes4nwinubh/app.bsky.graph.follow/3jvcsau7em22q'
-        //}
-        //process.stdout.write(util.inspect(follow, false, null, true))
+        await this.executeQuery("MATCH ()-[f:FOLLOW {uri: $uri}]-() DELETE f;", {
+          uri: follow.uri
+        })
       }
     }
     if (ops.follows.creates.length > 0) {
       for (const follow of ops.follows.creates) {
         if (verbose) process.stdout.write('f')
-        await this.executeQuery("MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW {weight: 2}]->(p2)", {
+        await this.executeQuery("MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW {weight: 2, uri: $uri}]->(p2)", {
           authorDid: follow.author,
-          subjectDid: follow.record.subject
+          subjectDid: follow.record.subject,
+          uri: follow.uri
         })
       }
     }
     if (ops.likes.deletes.length > 0) {
       for (const like of ops.likes.deletes) {
         if (verbose) process.stdout.write('L')
-        //FIXME sane situation as with follows.delete, just a URI and not a full source -> dest mapping
+        await this.executeQuery("MATCH ()-[l:LIKE {uri: $uri}]-() DELETE l;", {
+          uri: like.uri
+        })
       }
     }
     if (ops.likes.creates.length > 0) {
       for (const like of ops.likes.creates) {
         if (verbose) process.stdout.write('l')
-        await this.executeQuery("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", {
+        await this.executeQuery("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1, uri: $uri}]->(post)", {
           authorDid: like.author,
-          postUri: like.record.subject.uri
+          postUri: like.record.subject.uri,
+          uri: like.uri
         })
       }
     }
     if (ops.reposts.deletes.length > 0) {
       for (const repost of ops.reposts.deletes) {
         if (verbose) process.stdout.write('R')
-        await this.executeQuery("MATCH (p:Post {uri: $uri}) DETACH DELETE p", {
+        await this.executeQuery("MATCH (p:Post {uri: $uri}) DETACH DELETE p;", {
           uri: repost.uri
         })
       }
@@ -115,21 +118,27 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.reposts.creates.length > 0) {
       for (const repost of ops.reposts.creates) {
         if (verbose) process.stdout.write('r')
-        await this.executeQuery("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) RETURN p", {
+        await this.executeQuery("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) MERGE (person)-[:AUTHOR_OF {weight: 0}]->(post)", {
           uri: repost.uri,
           cid: repost.cid,
           author: repost.author,
           repostUri: repost.record.subject.uri,
           createdAt: repost.record.createdAt
         })
+
+        await this.executeQuery("MERGE (repost:Post {uri: $uri, repostUri: $originalUri}) MERGE (original:Post {uri: $originalUri}) MERGE (repost)-[:REPOST_OF {weight: 0}]->(original)", {
+          uri: repost.uri,
+          originalUri: repost.record.subject.uri
+        })
       }
     }
   }
 
-  async executeQuery(query: string, params: object, retryCount: number = 10): Promise<void> {
+  async executeQuery(query: string, params: object, retryCount: number = 10): Promise<QueryResult<Dict> | undefined> {
     const session = this.driver.session()
+    let results: QueryResult<Dict> | undefined;
     try {
-      await session.run(query, params);
+      results = await session.run(query, params);
     } catch (error) {
       if (this.isRetryableError(error) && retryCount > 0) {
         this.queryQueue.push({
@@ -146,6 +155,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     } finally {
       session.close()
     }
+
+    return results;
   }
 
   private isRetryableError(error: any): boolean {

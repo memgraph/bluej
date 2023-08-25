@@ -18,10 +18,43 @@ Or follow the instructions for your platform on https://memgraph.com/docs/memgra
 
 Indexes are critical for performance, for each event that comes in the database needs to match user id's and post id's, and without indexes those take a looonnggg time (for a computer anyway), so once you have memgraph running, create indexes using this query:
 ```
-CREATE INDEX ON :Person(did)
-CREATE INDEX ON :Post(uri)
-CREATE INDEX ON :Person
-CREATE INDEX ON :Post
+CREATE INDEX ON :Person(did);
+CREATE INDEX ON :Person(handle);
+CREATE INDEX ON :Post(uri);
+CREATE INDEX ON :Person;
+CREATE INDEX ON :Post;
+```
+
+### Triggers
+
+In order for the visualization to work, Memgraph needs to have certain triggers stored. You can create the necessary triggers using the following queries (each probably needs to be done separately):
+
+```
+DROP TRIGGER nodeCreate;
+DROP TRIGGER relationshipCreate;
+DROP TRIGGER nodeDelete;
+DROP TRIGGER relationshipDelete;
+DROP TRIGGER personEnrich;
+
+CREATE TRIGGER nodeCreate ON () CREATE AFTER COMMIT EXECUTE
+UNWIND createdVertices AS createdNode
+RETURN visualization.create_node(createdNode);
+
+CREATE TRIGGER relationshipCreate ON --> CREATE AFTER COMMIT EXECUTE
+UNWIND createdEdges AS createdRelationship
+RETURN visualization.handle_relationship(createdRelationship, "merge");
+
+CREATE TRIGGER nodeDelete ON () DELETE AFTER COMMIT EXECUTE
+UNWIND deletedVertices AS deletedNode
+RETURN visualization.delete_node(deletedNode);
+
+CREATE TRIGGER relationshipDelete ON --> DELETE AFTER COMMIT EXECUTE
+UNWIND deletedEdges AS deletedRelationship
+RETURN visualization.handle_relationship(deletedRelationship, "detach");
+
+CREATE TRIGGER personEnrich ON () CREATE AFTER COMMIT EXECUTE
+UNWIND createdVertices AS createdNode
+RETURN CASE LABELS(createdNode)[0] WHEN 'Person' THEN visualization.enrich_person(createdNode.did) END;
 ```
 
 ## Running
