@@ -20,6 +20,7 @@ Indexes are critical for performance, for each event that comes in the database 
 ```
 CREATE INDEX ON :Person(did);
 CREATE INDEX ON :Person(handle);
+CREATE INDEX ON :Person(community_id);
 CREATE INDEX ON :Post(uri);
 CREATE INDEX ON :Person;
 CREATE INDEX ON :Post;
