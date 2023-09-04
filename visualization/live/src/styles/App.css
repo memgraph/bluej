@@ -2,7 +2,7 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(50px, -50%);
+    transform: translate(-50%, calc(+50% - 20px));
     background-color: #EEEEEE;
     color: #000000;
     z-index: 1;

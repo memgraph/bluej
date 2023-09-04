@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import ForceGraph2D from 'react-force-graph-2d';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
 import { Input, TextField, InputAdornment, Button, Divider, Link, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
@@ -61,8 +62,10 @@ function App({socket}) {
 
     const [animation, setAnimation] = useState(true);
     const [coloring, setColoring] = useState(true);
+    const [is3D, setIs3D] = useState(true);
 
-    const fgRef = useRef();
+    const ref3D = useRef();
+    const ref2D = useRef();
     const animationTime = 2000;
 
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -89,10 +92,10 @@ function App({socket}) {
     };
 
     const linkColorScheme = {
-        'has root': '#FFC516',
-        'has parent': '#E30024',
-        'liked': '#6E0097',
-        'followed': '#FF0097',
+        'has root': '#0066FF',
+        'has parent': '#0066FF',
+        'liked': '#0066FF',
+        'followed': '#0066FF',
         'is author of': '#FFFFFF',
         'is repost of': '#FFFFFF'
     };
@@ -140,9 +143,14 @@ function App({socket}) {
         setHighlightLinks(new Set());
 
         if (resetCamera) {
-            fgRef.current.cameraPosition({x: 500, y: 500, z: 500}, null, animationTime);
+            if (is3D) {
+                ref3D.current.cameraPosition({x: 500, y: 500, z: 500}, null, animationTime);
+            } else {
+                ref2D.current.centerAt(0, 0, animationTime);
+                ref2D.current.zoom(1, animationTime);
+            }
         }
-    }, [currTimeout]);
+    }, [is3D, ref3D, ref2D, currTimeout]);
 
     const updateSelected = useCallback(() => {
         setSelectedNodes(new Set(selectedNodes));
@@ -172,12 +180,17 @@ function App({socket}) {
     }, [currTimeout]);
 
     const handleClick = useCallback(node => {
-        if (node.x === 0 && node.y === 0 && node.z === 0) {
-            fgRef.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
+        if (is3D) {
+            if (node.x === 0 && node.y === 0 && node.z === 0) {
+                ref3D.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
+            } else {
+                const distance = 500;
+                const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                ref3D.current.cameraPosition({x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, animationTime);
+            }
         } else {
-            const distance = 500;
-            const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
-            fgRef.current.cameraPosition({x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, animationTime);
+            ref2D.current.centerAt(node.x, node.y, animationTime);
+            ref2D.current.zoom(2.5, animationTime);
         }
 
         clearSelected();
@@ -202,7 +215,7 @@ function App({socket}) {
         setCurrTimeout(setTimeout(() => {
             setSelectedDescActive(true);
         }, animationTime));
-    }, [fgRef, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
+    }, [is3D, ref3D, ref2D, links, selectedNodes, selectedLinks, socket, updateSelected, clearSelected]);
 
     const updateHighlight = () => {
         setHighlightNodes(new Set(highlightNodes));
@@ -291,7 +304,14 @@ function App({socket}) {
         }
 
         setAnimation(!disabled);
-    }, [clearSelected]);
+    }, [clearSelected, clearHighlight]);
+
+    const handle3DChanged = useCallback((disabled) => {
+        clearSelected();
+        clearHighlight();
+
+        setIs3D(!disabled);
+    }, [clearSelected, clearHighlight]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -806,13 +826,13 @@ function App({socket}) {
                                         style={{cursor: 'pointer', transition: 'color 0.3s'}}
                                         onClick={(e) => {
                                             console.log("Klikno hehe")
-                                            /*e.preventDefault();
+                                            e.preventDefault();
                                             setSearchString('');
                                             setInterestHandle('');
                     
                                             socket.emit('interest', '');
                                             setSubscribed(false);
-                                            clear();*/
+                                            clear();
                                         }}
                                     />
                                 </InputAdornment>
@@ -881,6 +901,10 @@ function App({socket}) {
                             <div className='itemSettings'>
                                 <p className='itemText'>Disable Coloring</p>
                                 <Checkbox sx={{color: '#0066FF'}} onChange={(e) => setColoring(!e.target.checked)}/>
+                            </div>
+                            <div className='itemSettings'>
+                                <p className='itemText'>Disable 3D</p>
+                                <Checkbox sx={{color: '#0066FF'}} onChange={(e) => handle3DChanged(e.target.checked)}/>
                             </div>
                             <div className='itemTitle'>
                                 <ModeEditIcon style={{margin: '10px 5px 0 5px'}}/>
@@ -1013,10 +1037,11 @@ function App({socket}) {
                         </div>
                     }
                 </div>}
+                {is3D ?
                 <ForceGraph3D
                     graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
-                    ref={fgRef}
+                    ref={ref3D}
                     backgroundColor='#ffffff'
                     showNavInfo={false}
 
@@ -1063,7 +1088,55 @@ function App({socket}) {
                     forceEngine='d3'
                     d3AlphaDecay={highlighted ? 1 : 0}
                     d3VelocityDecay={0.75}
-                />
+                /> :
+                <ForceGraph2D
+                    graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
+
+                    ref={ref2D}
+                    backgroundColor='#ffffff'
+
+                    width={windowSize[0]}
+                    height={windowSize[1]}
+
+                    nodeLabel={node => nodeGroupNames[node.group]}
+                    nodeRelSize={10}
+                    nodeColor={node => {
+                        if (!coloring) {
+                            return '#FFFFFF';
+                        }
+                        if (highlightNode === node || selectedNode === node) {
+                            return nodeColorScheme[3];
+                        }
+                        if (highlightNodes.has(node) || selectedNodes.has(node)) {
+                            return nodeColorScheme[4];
+                        }
+                        return nodeColorScheme[node.group];
+                    }}
+
+                    linkLabel='value'
+                    linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
+                    linkCurvature={0.25}
+                    linkColor={link => {
+                        if (!coloring) {
+                            return '#FFFFFF';
+                        }
+                        return linkColorScheme[link.value];
+                    }}
+
+                    linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
+                    linkDirectionalArrowRelPos={0.5}
+
+                    linkDirectionalParticles={link => highlightLinks.has(link) || selectedLinks.has(link) ? 1 : 0}
+                    linkDirectionalParticleWidth={5}
+                    linkDirectionalParticleSpeed={0.025}
+
+                    onNodeClick={animation ? handleClick : () => {}}
+                    onNodeHover={animation ? handleNodeHover : () => {}}
+                    onLinkHover={animation ? handleLinkHover : () => {}}
+
+                    d3AlphaDecay={highlighted ? 1 : 0}
+                    d3VelocityDecay={0.75}
+                />}
             </div>
             }
         </div>
