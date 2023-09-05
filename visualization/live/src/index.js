@@ -5,8 +5,7 @@ import App from './components/App';
 import { io } from 'socket.io-client';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-const socket = io('http://localhost:3002');
-// const socket = io('https://bluej.memgraph.com/viz/socket');
+const socket = io(process.env.REACT_APP_BACKEND);
 
 root.render(
   <App socket={socket}/>

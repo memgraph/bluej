@@ -173,6 +173,9 @@ function App({socket}) {
     }, [selectedNodes, selectedLinks, currTimeout, updateSelected]);
 
     const handleClick = useCallback(node => {
+        if (node.id && !node.info) {
+            socket.emit('info', node.id);
+        }
         if (is3D) {
             if (node.x === 0 && node.y === 0 && node.z === 0) {
                 ref3D.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
@@ -208,7 +211,7 @@ function App({socket}) {
         setCurrTimeout(setTimeout(() => {
             setSelectedDescActive(true);
         }, animationTime));
-    }, [is3D, ref3D, ref2D, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
+    }, [is3D, ref3D, ref2D, links, selectedNodes, selectedLinks, socket, updateSelected, clearSelected]);
 
     const updateHighlight = useCallback(() => {
         setHighlightNodes(new Set(highlightNodes));
@@ -714,6 +717,18 @@ function App({socket}) {
                 };
             });
         }
+
+        const onInfo = msg => {
+            let node = nodes[msg.id];
+
+            if (node) {
+                node.info = msg.info;
+                setNodes(previous => ({
+                    ...previous,
+                    [msg.id]: node
+                }));
+            }
+        }
         
         const onInterest = msg => {
             clear(false);
@@ -752,6 +767,7 @@ function App({socket}) {
         socket.on('merge', onMerge);
         socket.on('delete', onDelete);
         socket.on('detach', onDetach);
+        socket.on('info', onInfo);
         socket.on(eventName, onInterest);
 
         return () => {
@@ -759,6 +775,7 @@ function App({socket}) {
             socket.off('merge', onMerge);
             socket.off('delete', onDelete);
             socket.off('detach', onDetach);
+            socket.off('info', onInfo);
             socket.off(eventName, onInterest);
         };
     }, [nodes, links, maxNodes, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestHandle, socket, clear]);

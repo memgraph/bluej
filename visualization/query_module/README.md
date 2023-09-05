@@ -3,7 +3,7 @@
 First run the following two commands to start running Memgraph Platform and setup a bash commandline which we will use for the next steps:
 
 ```
-docker run -d -it -p 7687:7687 -p 7444:7444 -p 3000:3000 --name visualization_module_builder memgraph/memgraph-platform
+docker run -d -it -p 7687:7687 -p 7444:7444 -p 3000:3000 --name visualization_module_builder --add-host=host.docker.internal:host-gateway memgraph/memgraph-platform
 docker exec -u 0 -it visualization_module_builder bash
 ```
 
@@ -59,7 +59,7 @@ Now, the file visualization.so should exist in folder /mage/cpp/build/visualizat
   cp visualization.so /usr/lib/memgraph/query_modules
 ```
 
-To test if it works, run the following Cypher query in Memgraph Lab or mgconsole:
+To load the query module to Memgraph, run the following Cypher query in Memgraph Lab or mgconsole:
 
 ```
   CALL mg.load_all();
