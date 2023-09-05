@@ -2,11 +2,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
-import { Input, TextField, InputAdornment, Button, Divider, Link, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
-import { FormControl, FormGroup, FormControlLabel, InputLabel, Select, MenuItem, Checkbox } from '@mui/material';
+import { TextField, InputAdornment, Button, Divider, Link } from '@mui/material';
+import { Select, MenuItem, Checkbox } from '@mui/material';
 import { styled } from '@mui/system';
-import SquareIcon from '@mui/icons-material/Square';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -169,15 +167,10 @@ function App({socket}) {
         setSelectedDescActive(false);
 
         setSelectedNode(null);
-        setSelectedNodes(new Set());
-        setSelectedLinks(new Set());
-
-        setNodes(previous => {
-            return {
-                ...previous
-            };
-        });
-    }, [currTimeout]);
+        selectedNodes.clear();
+        selectedLinks.clear();
+        updateSelected();
+    }, [selectedNodes, selectedLinks, currTimeout, updateSelected]);
 
     const handleClick = useCallback(node => {
         if (is3D) {
@@ -215,9 +208,9 @@ function App({socket}) {
         setCurrTimeout(setTimeout(() => {
             setSelectedDescActive(true);
         }, animationTime));
-    }, [is3D, ref3D, ref2D, links, selectedNodes, selectedLinks, socket, updateSelected, clearSelected]);
+    }, [is3D, ref3D, ref2D, links, selectedNodes, selectedLinks, updateSelected, clearSelected]);
 
-    const updateHighlight = () => {
+    const updateHighlight = useCallback(() => {
         setHighlightNodes(new Set(highlightNodes));
         setHighlightLinks(new Set(highlightLinks));
 
@@ -226,19 +219,14 @@ function App({socket}) {
                 ...previous
             };
         });
-    };
+    }, [highlightNodes, highlightLinks]);
 
-    const clearHighlight = () => {
+    const clearHighlight = useCallback(() => {
         setHighlightNode(null);
-        setHighlightNodes(new Set());
-        setHighlightLinks(new Set());
-
-        setNodes(previous => {
-            return {
-                ...previous
-            };
-        });
-    }
+        highlightNodes.clear();
+        highlightLinks.clear();
+        updateHighlight();
+    }, [highlightNodes, highlightLinks, updateHighlight]);
 
     const handleNodeHover = node => {
         highlightNodes.clear();
