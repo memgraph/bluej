@@ -932,8 +932,7 @@ function App({socket}) {
                 <div className='nodeInfo'>
                     <div className='infoTitle'>
                         {
-                            selectedNode.id.startsWith('did') ? 
-                                'Person' : 'Post'
+                            selectedNode.id.startsWith('at') ? selectedNode?.repostUri ? 'Repost' : 'Post' : 'Person'
                         }
                         <CloseIcon 
                             style={{
@@ -946,7 +945,23 @@ function App({socket}) {
                         selectedNode.id.startsWith('did') ? 
                             <div className='nodeInfoBody'> 
                                 <div className='nodeInfoList'>
-                                    ID: {selectedNode.id}
+                                    { selectedNode.info ? 
+                                        <div>
+                                            {
+                                                Object.entries(selectedNode.info).map(([key, value]) => {
+                                                    return (
+                                                        <div key={key}>
+                                                            <div className='infoName'>{key}</div> 
+                                                            <div>{value}</div>
+                                                        </div>
+                                                    )
+                                                })
+                                            }
+                                        </div> :
+                                        <div className='noInfo'>
+                                            No relevant information found.
+                                        </div>
+                                    }
                                 </div>
                                 <Divider/>
                                 <Link 
@@ -965,9 +980,23 @@ function App({socket}) {
                         selectedNode.text ? 
                             <div className='nodeInfoBody'> 
                                 <div className='nodeInfoList'>
-                                    ID: {selectedNode.id}
-                                    <br/>
-                                    Text: {selectedNode.text}
+                                    { selectedNode.info ? 
+                                        <div>
+                                            {
+                                                Object.entries(selectedNode.info).map(([key, value]) => {
+                                                    return (
+                                                        <div key={key}>
+                                                            <div className='infoName'>{key}</div> 
+                                                            <div>{value}</div>
+                                                        </div>
+                                                    )
+                                                })
+                                            }
+                                        </div> :
+                                        <div className='noInfo'>
+                                            No relevant information found.
+                                        </div>
+                                    }
                                 </div>
                                 <Divider/>
                                 <Link 
@@ -986,9 +1015,23 @@ function App({socket}) {
                         selectedNode.repostUri ? 
                             <div className='nodeInfoBody'> 
                                 <div className='nodeInfoList'>
-                                    ID: {selectedNode.id}
-                                    <br/>
-                                    Original post ID: {selectedNode.repostUri}
+                                    { selectedNode.info ? 
+                                        <div>
+                                            {
+                                                Object.entries(selectedNode.info).map(([key, value]) => {
+                                                    return (
+                                                        <div key={key}>
+                                                            <div className='infoName'>{key}</div>
+                                                            <div>{value}</div>
+                                                        </div>
+                                                    )
+                                                })
+                                            }
+                                        </div> :
+                                        <div className='noInfo'>
+                                            No relevant information found.
+                                        </div>
+                                    }
                                 </div>
                                 <Divider/>
                                 <Link 
@@ -1006,7 +1049,23 @@ function App({socket}) {
                             </div> :
                         <div className='nodeInfoBody'> 
                             <div className='nodeInfoList'>
-                                ID: {selectedNode.id}
+                                { selectedNode.info ? 
+                                    <div>
+                                        {
+                                            Object.entries(selectedNode.info).map(([key, value]) => {
+                                                return (
+                                                    <div key={key}>
+                                                        <div className='infoName'>{key}</div>
+                                                        <div>{value}</div>
+                                                    </div>
+                                                )
+                                            })
+                                        }
+                                    </div> :
+                                    <div className='noInfo'>
+                                        No relevant information found.
+                                    </div>
+                                }
                             </div>
                             <Divider/>
                             <Link 
@@ -1068,14 +1127,14 @@ function App({socket}) {
                     linkDirectionalParticleWidth={5}
                     linkDirectionalParticleSpeed={0.025}
 
-                    onNodeClick={animation && handleClick}
-                    onNodeHover={animation && handleNodeHover}
-                    onLinkHover={animation && handleLinkHover}
+                    onNodeClick={animation ? handleClick : () => {}}
+                    onNodeHover={animation ? handleNodeHover : () => {}}
+                    onLinkHover={animation ? handleLinkHover : () => {}}
 
                     forceEngine='d3'
                     d3AlphaDecay={highlighted ? 1 : 0}
                     d3VelocityDecay={0.75}
-                /> :
+                /> : 
                 <ForceGraph2D
                     graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
