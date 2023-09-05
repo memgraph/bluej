@@ -776,7 +776,7 @@ function App({socket}) {
                     <img src={memgraphLogo} alt='Memgraph logo' style={{width: "45%"}}/>
                     <img src={blueskyLogo} alt="bluesky logo" style={{width: "45%"}}/>
                 </div>
-                <div class="loader"></div>
+                <div className="loader"></div>
             </div>
             : <div style={{width: "100%", height: "100%"}}>
                 <ToastContainer 
@@ -813,7 +813,6 @@ function App({socket}) {
                                         className='clearSearchButton'
                                         style={{cursor: 'pointer', transition: 'color 0.3s'}}
                                         onClick={(e) => {
-                                            console.log("Klikno hehe")
                                             e.preventDefault();
                                             setSearchString('');
                                             setInterestHandle('');
