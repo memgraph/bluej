@@ -6,7 +6,7 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, calc(+50% - 20px));
+    transform: translate(-425px, -50%);
     background-color: #EEEEEE;
     color: #000000;
     z-index: 1;
@@ -25,6 +25,7 @@
 
 .nodeInfoList {
     margin-bottom: 10px;
+    padding-left: 6px;
 }
 
 .infoTitle {
@@ -34,6 +35,16 @@
     font-size: 17.5px;
     color: #0066FF;
     padding: 0 6px 6px 6px;
+}
+
+.infoName {
+    font-weight: 500;
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+.noInfo {
+    margin-top: 10px;
 }
 
 .legend {

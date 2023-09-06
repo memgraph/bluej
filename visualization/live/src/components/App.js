@@ -19,7 +19,7 @@ import blueskyLogo from '../assets/images/bluesky.png' ;
 
 const CustomTextField = styled(TextField)(({ theme }) => ({
     '& .MuiOutlinedInput-root': {
-        backgroundColor: '#ffffff',
+        backgroundColor: '#FFFFFF',
         borderRadius: '30px 0 0 30px',
         boxShadow: '0px 3px 1px -2px rgba(0,0,0,0.2), 0px 2px 2px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)',
         '& fieldset': {
@@ -61,13 +61,13 @@ function App({socket}) {
     const [animation, setAnimation] = useState(true);
     const [coloring, setColoring] = useState(true);
     const [is3D, setIs3D] = useState(true);
+    
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [loadingScreen, setLoadingScreen] = useState(true);
 
     const ref3D = useRef();
     const ref2D = useRef();
     const animationTime = 2000;
-
-    const [drawerOpen, setDrawerOpen] = useState(false);
-    const [loadingScreen, setLoadingScreen] = useState(true);
 
     useEffect(() => {
         setTimeout(() => {
@@ -87,15 +87,6 @@ function App({socket}) {
         2: '#0066FF',
         3: '#00C2FF',
         4: '#A9A9A9'
-    };
-
-    const linkColorScheme = {
-        'has root': '#0066FF',
-        'has parent': '#0066FF',
-        'liked': '#0066FF',
-        'followed': '#0066FF',
-        'is author of': '#FFFFFF',
-        'is repost of': '#FFFFFF'
     };
 
     useEffect(() => {
@@ -176,6 +167,7 @@ function App({socket}) {
         if (node.id && !node.info) {
             socket.emit('info', node.id);
         }
+        
         if (is3D) {
             if (node.x === 0 && node.y === 0 && node.z === 0) {
                 ref3D.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
@@ -985,10 +977,10 @@ function App({socket}) {
                                     href={`https://bsky.app/profile/${selectedNode.id}`} 
                                     underline='hover'
                                     target='_blank'
-                                    color='secondary'
                                     sx={{
                                         alignSelf: 'center',
-                                        marginTop: '10px'
+                                        marginTop: '10px',
+                                        color: '#0066FF'
                                     }}
                                 >
                                     Visit profile
@@ -1020,10 +1012,10 @@ function App({socket}) {
                                     href={`https://bsky.app/profile/${selectedNode.id.split('//')[1].split('/')[0]}/post/${selectedNode.id.split('//')[1].split('/')[2]}`} 
                                     underline='hover'
                                     target='_blank'
-                                    color='secondary'
                                     sx={{
                                         alignSelf: 'center',
-                                        marginTop: '10px'
+                                        marginTop: '10px',
+                                        color: '#0066FF'
                                     }}
                                 >
                                     Visit post
@@ -1055,10 +1047,10 @@ function App({socket}) {
                                     href={`https://bsky.app/profile/${selectedNode.repostUri.split('//')[1].split('/')[0]}/post/${selectedNode.repostUri.split('//')[1].split('/')[2]}`} 
                                     underline='hover'
                                     target='_blank'
-                                    color='secondary'
                                     sx={{
                                         alignSelf: 'center',
-                                        marginTop: '10px'
+                                        marginTop: '10px',
+                                        color: '#0066FF'
                                     }}
                                 >
                                     Visit original post
@@ -1089,10 +1081,10 @@ function App({socket}) {
                                 href={`https://bsky.app/profile/${selectedNode.id.split('//')[1].split('/')[0]}/post/${selectedNode.id.split('//')[1].split('/')[2]}`} 
                                 underline='hover'
                                 target='_blank'
-                                color='secondary'
                                 sx={{
                                     alignSelf: 'center',
-                                    marginTop: '10px'
+                                    marginTop: '10px',
+                                    color: '#0066FF'
                                 }}
                             >
                                 Visit post
@@ -1105,7 +1097,7 @@ function App({socket}) {
                     graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
                     ref={ref3D}
-                    backgroundColor='#ffffff'
+                    backgroundColor='#FFFFFF'
                     showNavInfo={false}
 
                     width={windowSize[0]}
@@ -1115,7 +1107,7 @@ function App({socket}) {
                     nodeRelSize={10}
                     nodeColor={node => {
                         if (!coloring) {
-                            return '#FFFFFF';
+                            return '#474747';
                         }
                         if (highlightNode === node || selectedNode === node) {
                             return nodeColorScheme[3];
@@ -1132,9 +1124,9 @@ function App({socket}) {
                     linkCurvature={0.25}
                     linkColor={link => {
                         if (!coloring) {
-                            return '#FFFFFF';
+                            return '#474747';
                         }
-                        return linkColorScheme[link.value];
+                        return '#0066FF';
                     }}
 
                     linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
@@ -1156,7 +1148,7 @@ function App({socket}) {
                     graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
                     ref={ref2D}
-                    backgroundColor='#ffffff'
+                    backgroundColor='#FFFFFF'
 
                     width={windowSize[0]}
                     height={windowSize[1]}
@@ -1165,7 +1157,7 @@ function App({socket}) {
                     nodeRelSize={10}
                     nodeColor={node => {
                         if (!coloring) {
-                            return '#FFFFFF';
+                            return '#474747';
                         }
                         if (highlightNode === node || selectedNode === node) {
                             return nodeColorScheme[3];
@@ -1181,9 +1173,9 @@ function App({socket}) {
                     linkCurvature={0.25}
                     linkColor={link => {
                         if (!coloring) {
-                            return '#FFFFFF';
+                            return '#474747';
                         }
-                        return linkColorScheme[link.value];
+                        return '#0066FF';
                     }}
 
                     linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
