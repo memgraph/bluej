@@ -1,3 +1,4 @@
+import { io } from 'socket.io-client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import ForceGraph3D from 'react-force-graph-3d';
@@ -35,8 +36,10 @@ const CustomTextField = styled(TextField)(({ theme }) => ({
     },
 }));
 
-function App({socket}) {
+function App() {
     const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
+    const [socket, setSocket] = useState(null);
+    const [socketInterval, setSocketInterval] = useState(null);
     
     const [nodes, setNodes] = useState({});
     const [links, setLinks] = useState({});
@@ -69,12 +72,6 @@ function App({socket}) {
     const ref2D = useRef();
     const animationTime = 2000;
 
-    useEffect(() => {
-        setTimeout(() => {
-            setLoadingScreen(false);
-        }, 4000);
-    }, []);
-
     const nodeGroupNames = {
         1: 'Post',
         2: 'Person',
@@ -100,6 +97,24 @@ function App({socket}) {
             window.removeEventListener('resize', handleWindowResize);
         };
     }, []);
+
+    const removeLoadingScreen = (s) => {
+        if (s.connected) {
+            setLoadingScreen(false);
+        }
+    }
+
+    useEffect(() => {
+        const s = io(process.env.REACT_APP_BACKEND);
+        setSocket(s);
+        setSocketInterval(setInterval(() => removeLoadingScreen(s), 500));
+    }, []);
+
+    useEffect(() => {
+        if (!loadingScreen && socketInterval) {
+            clearInterval(socketInterval);
+        }
+    }, [loadingScreen, socketInterval]);
 
     useEffect(() => {
         if (highlighted) {
@@ -165,7 +180,7 @@ function App({socket}) {
 
     const handleClick = useCallback(node => {
         if (node.id && !node.info) {
-            socket.emit('info', node.id);
+            socket?.emit('info', node.id);
         }
         
         if (is3D) {
@@ -266,7 +281,7 @@ function App({socket}) {
         e.preventDefault();
 
         setInterestHandle(searchString);
-        socket.emit('interest', searchString);
+        socket?.emit('interest', searchString);
         setSubscribed(false);
         
         clear();
@@ -755,20 +770,20 @@ function App({socket}) {
 
         const eventName = `initial ${interestHandle}`
 
-        socket.on('create', onCreate);
-        socket.on('merge', onMerge);
-        socket.on('delete', onDelete);
-        socket.on('detach', onDetach);
-        socket.on('info', onInfo);
-        socket.on(eventName, onInterest);
+        socket?.on('create', onCreate);
+        socket?.on('merge', onMerge);
+        socket?.on('delete', onDelete);
+        socket?.on('detach', onDetach);
+        socket?.on('info', onInfo);
+        socket?.on(eventName, onInterest);
 
         return () => {
-            socket.off('create', onCreate);
-            socket.off('merge', onMerge);
-            socket.off('delete', onDelete);
-            socket.off('detach', onDetach);
-            socket.off('info', onInfo);
-            socket.off(eventName, onInterest);
+            socket?.off('create', onCreate);
+            socket?.off('merge', onMerge);
+            socket?.off('delete', onDelete);
+            socket?.off('detach', onDetach);
+            socket?.off('info', onInfo);
+            socket?.off(eventName, onInterest);
         };
     }, [nodes, links, maxNodes, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestHandle, socket, clear]);
 
@@ -826,7 +841,7 @@ function App({socket}) {
                                             setSearchString('');
                                             setInterestHandle('');
                     
-                                            socket.emit('interest', '');
+                                            socket?.emit('interest', '');
                                             setSubscribed(false);
                                             clear();
                                         }}
