@@ -5,7 +5,9 @@ import App from './components/App';
 import { io } from 'socket.io-client';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-const socket = io(process.env.REACT_APP_BACKEND);
+const socket = io(process.env.REACT_APP_BACKEND_DOMAIN, {
+  path: process.env.REACT_APP_BACKEND_PATH
+});
 
 root.render(
   <App socket={socket}/>
