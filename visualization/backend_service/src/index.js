@@ -134,9 +134,9 @@ io.on('connection', (socket) => {
                             });
                         }
                     }
-
-                    clientInterests[socket.id] = DIDs;
                 }
+
+                clientInterests[socket.id] = DIDs;
                 socket.emit(`initial ${clientInterest}`, results);
             } finally {
                 await session.close();
