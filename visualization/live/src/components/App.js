@@ -1,17 +1,45 @@
+import { io } from 'socket.io-client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import ForceGraph3D from 'react-force-graph-3d';
 import '../styles/App.css';
-import { TextField, InputAdornment, Button, Divider, Link, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
-import { FormControl, FormGroup, FormControlLabel, InputLabel, Select, MenuItem, Checkbox } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import SquareIcon from '@mui/icons-material/Square';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { TextField, InputAdornment, Button, Divider, Link } from '@mui/material';
+import { Select, MenuItem, Checkbox } from '@mui/material';
+import { styled } from '@mui/system';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';                                 
+import 'react-toastify/dist/ReactToastify.css';
 
-function App({socket}) {
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import MenuIcon from '@mui/icons-material/Menu';
+import ModeEditIcon from '@mui/icons-material/ModeEdit';
+import SettingsIcon from '@mui/icons-material/Settings';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import memgraphLogo from '../assets/images/memgraph.png'; 
+import blueskyLogo from '../assets/images/bluesky.png' ;
+
+const CustomTextField = styled(TextField)(({ theme }) => ({
+    '& .MuiOutlinedInput-root': {
+        backgroundColor: '#FFFFFF',
+        borderRadius: '30px 0 0 30px',
+        boxShadow: '0px 3px 1px -2px rgba(0,0,0,0.2), 0px 2px 2px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)',
+        '& fieldset': {
+            borderColor: '#0066FF',
+        },
+        '&:hover fieldset': {
+            borderColor: '#0085FF',
+            borderWidth: '2px'
+        },
+        '&.Mui-focused fieldset': {
+            borderColor: '#00C2FF',
+        },
+    },
+}));
+
+function App() {
     const [windowSize, setWindowSize] = useState([window.innerWidth, window.innerHeight]);
+    const [socket, setSocket] = useState(null);
+    const [socketInterval, setSocketInterval] = useState(null);
     
     const [nodes, setNodes] = useState({});
     const [links, setLinks] = useState({});
@@ -36,6 +64,9 @@ function App({socket}) {
     const [animation, setAnimation] = useState(true);
     const [coloring, setColoring] = useState(true);
     const [is3D, setIs3D] = useState(true);
+    
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [loadingScreen, setLoadingScreen] = useState(true);
 
     const ref3D = useRef();
     const ref2D = useRef();
@@ -49,19 +80,10 @@ function App({socket}) {
     }
 
     const nodeColorScheme = {
-        1: '#FFC516',
-        2: '#6E0097',
-        3: '#4ED5ED',
-        4: '#A5ED4E'
-    };
-
-    const linkColorScheme = {
-        'has root': '#FFC516',
-        'has parent': '#E30024',
-        'liked': '#6E0097',
-        'followed': '#FF0097',
-        'is author of': '#FFFFFF',
-        'is repost of': '#FFFFFF'
+        1: '#474747',
+        2: '#0066FF',
+        3: '#00C2FF',
+        4: '#A9A9A9'
     };
 
     useEffect(() => {
@@ -75,6 +97,24 @@ function App({socket}) {
             window.removeEventListener('resize', handleWindowResize);
         };
     }, []);
+
+    const removeLoadingScreen = (s) => {
+        if (s.connected) {
+            setLoadingScreen(false);
+        }
+    }
+
+    useEffect(() => {
+        const s = io(process.env.REACT_APP_BACKEND);
+        setSocket(s);
+        setSocketInterval(setInterval(() => removeLoadingScreen(s), 500));
+    }, []);
+
+    useEffect(() => {
+        if (!loadingScreen && socketInterval) {
+            clearInterval(socketInterval);
+        }
+    }, [loadingScreen, socketInterval]);
 
     useEffect(() => {
         if (highlighted) {
@@ -140,9 +180,9 @@ function App({socket}) {
 
     const handleClick = useCallback(node => {
         if (node.id && !node.info) {
-            socket.emit('info', node.id);
+            socket?.emit('info', node.id);
         }
-
+        
         if (is3D) {
             if (node.x === 0 && node.y === 0 && node.z === 0) {
                 ref3D.current.cameraPosition({x: 250, y: 250, z: 250}, node, animationTime);
@@ -241,7 +281,7 @@ function App({socket}) {
         e.preventDefault();
 
         setInterestHandle(searchString);
-        socket.emit('interest', searchString);
+        socket?.emit('interest', searchString);
         setSubscribed(false);
         
         clear();
@@ -730,191 +770,307 @@ function App({socket}) {
 
         const eventName = `initial ${interestHandle}`
 
-        socket.on('create', onCreate);
-        socket.on('merge', onMerge);
-        socket.on('delete', onDelete);
-        socket.on('detach', onDetach);
-        socket.on('info', onInfo);
-        socket.on(eventName, onInterest);
+        socket?.on('create', onCreate);
+        socket?.on('merge', onMerge);
+        socket?.on('delete', onDelete);
+        socket?.on('detach', onDetach);
+        socket?.on('info', onInfo);
+        socket?.on(eventName, onInterest);
 
         return () => {
-            socket.off('create', onCreate);
-            socket.off('merge', onMerge);
-            socket.off('delete', onDelete);
-            socket.off('detach', onDetach);
-            socket.off('info', onInfo);
-            socket.off(eventName, onInterest);
+            socket?.off('create', onCreate);
+            socket?.off('merge', onMerge);
+            socket?.off('delete', onDelete);
+            socket?.off('detach', onDetach);
+            socket?.off('info', onInfo);
+            socket?.off(eventName, onInterest);
         };
     }, [nodes, links, maxNodes, highlightNode, highlightNodes, highlightLinks, selectedNode, selectedNodes, selectedLinks, highlighted, currTimeout, interestHandle, socket, clear]);
 
+    const changeDrawerStatus = useCallback(e => {
+        setDrawerOpen(!drawerOpen);
+
+    }, [drawerOpen])
     return (
-        <div className='appContainer'>
-            <ToastContainer 
-                position='top-left'
-                autoClose={7500}
-                hideProgressBar={false}
-                newestOnTop={true}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme='light'
-            />
-            <div className='searchbarContainer'>
-                <TextField 
-                    variant='outlined'
-                    color='warning'
-                    size='small'
-
-                    label='Subscribe with user handle'
-                    placeholder='example.bsky.social'
-                    value={searchString}
-
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position='start'>
-                                <SearchIcon />
-                            </InputAdornment>
-                        ),
-                    }}
-
-                    sx={{
-                        width: '400px',
-                        fontSize: '17.5px'
-                    }}
-
-                    onChange={(e) => setSearchString(e.target.value)} 
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)}
-                />
-                <Button 
-                    variant='contained'
-                    color='warning'
-
-                    onClick={(e) => {
-                        e.preventDefault();
-                        setSearchString('');
-                        setInterestHandle('');
-
-                        socket.emit('interest', '');
-                        setSubscribed(false);
-                        clear();
-                    }}
-                >
-                    Clear
-                </Button>
-                <Button
-                    variant='contained'
-                    color='secondary'
-
-                    onClick={handleSearchSubmit}
-                >
-                    Subscribe
-                </Button>
-            </div>
-            {subscribed && Object.keys(nodes).length === 0 && 
-            <div className='noNodesWarning'>
-                Zero nodes found for subscribed user ID.
-                Please wait a bit, enter a different ID or clear the current one.
-            </div>}
-            {coloring &&
-            <div className='legend'>
-                <div className='infoTitle'>
-                    Node types
+        <>
+        <div style={{width: "100%", height: "100%"}}>
+            {loadingScreen
+            ? <div className='loadingContainer'>
+                <div className='logoContainer'>
+                    <img src={memgraphLogo} alt='Memgraph logo' style={{width: "45%"}}/>
+                    <img src={blueskyLogo} alt="bluesky logo" style={{width: "45%"}}/>
                 </div>
-                <Divider/>
-                {Object.keys(nodeColorScheme).map(key => {
-                    return (
-                        <div className='legendItem' key={key}>
-                            <SquareIcon sx={{color: nodeColorScheme[key]}}/>
-                            <div>
-                                {nodeGroupNames[key]}
+                <div className="loader"></div>
+            </div>
+            : <div style={{width: "100%", height: "100%"}}>
+                <ToastContainer 
+                    position='top-left'
+                    autoClose={7500}
+                    hideProgressBar={false}
+                    newestOnTop={true}
+                    closeOnClick
+                    rtl={false}
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                    theme='light'
+                />
+                <div className='searchContainer'>
+                    <CustomTextField
+                        variant='outlined'
+                        placeholder='Subscribe with user handle'
+
+                        size='small'
+                        value={searchString}
+
+                        className='{classes.searchTextField}'
+
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position='start'>
+                                    <SearchIcon />
+                                </InputAdornment>
+                            ),
+                            endAdornment: (
+                                <InputAdornment position='end'>
+                                    <CloseIcon
+                                        className='clearSearchButton'
+                                        style={{cursor: 'pointer', transition: 'color 0.3s'}}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setSearchString('');
+                                            setInterestHandle('');
+                    
+                                            socket?.emit('interest', '');
+                                            setSubscribed(false);
+                                            clear();
+                                        }}
+                                    />
+                                </InputAdornment>
+                            )
+                        }}
+
+                        sx={{
+                            width: '50%',
+                            fontSize: '17.5px',
+                        }}
+
+                        onChange={(e) => setSearchString(e.target.value)} 
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit(e)}
+                    />
+                    <Button
+                        variant='contained'
+                        style={{
+                            backgroundColor: '#0066FF',
+                            borderRadius: '0 30px 30px 0'
+                        }}
+
+                        onClick={handleSearchSubmit}
+                    >
+                        Subscribe
+                    </Button>
+                </div>
+                <div className={`drawerContainer ${drawerOpen ? '' : 'smaller'}`}>
+                    <div className={`drawerContent ${drawerOpen ? '' : 'inactive'}`}>
+                        <Button
+                            variant='contained'
+                            style={{
+                                marginTop: '15px',
+                                backgroundColor: '#0066FF',
+                                borderRadius: '10px 0 0 10px',
+                            }}
+                            startIcon={<MenuIcon style={{width: '35px', height: '35px'}}/>}
+                            onClick={changeDrawerStatus}
+                        ></Button>
+                        <div className='drawerMenu'>
+                            <div className='itemTitle'>
+                                <SettingsIcon style={{margin: '10px 5px 0 5px'}}/>
+                                <p style={{margin: '10px 0 0 0'}}>Settings</p>
+                            </div>
+                            <div className='itemSettings'>
+                                <p className='itemText'>Max node count</p>
+                                <Select
+                                    value={maxNodes}
+                                    size="small"
+                                    sx={{
+                                        marginRight: '10px'
+                                    }}
+
+                                    onChange={(e) => handleMaxNodeChange(e.target.value)}
+                                >
+                                    <MenuItem value={100}>100</MenuItem>
+                                    <MenuItem value={250}>250</MenuItem>
+                                    <MenuItem value={500}>500</MenuItem>
+                                    <MenuItem value={1000}>1000</MenuItem>
+                                    <MenuItem value={2500}>2500</MenuItem>
+                                </Select>
+                            </div>
+                            <div className='itemSettings'>
+                                <p className='itemText'>Disable Animations</p>
+                                <Checkbox sx={{color: '#0066FF'}} onChange={(e) => handleAnimationChanged(e.target.checked)}/>
+                            </div>
+                            <div className='itemSettings'>
+                                <p className='itemText'>Disable Coloring</p>
+                                <Checkbox sx={{color: '#0066FF'}} onChange={(e) => setColoring(!e.target.checked)}/>
+                            </div>
+                            <div className='itemSettings'>
+                                <p className='itemText'>Disable 3D</p>
+                                <Checkbox sx={{color: '#0066FF'}} onChange={(e) => handle3DChanged(e.target.checked)}/>
+                            </div>
+                            <div className='itemTitle'>
+                                <ModeEditIcon style={{margin: '10px 5px 0 5px'}}/>
+                                <p style={{margin: '10px 0 0 0'}}>Node coloring</p>
+                            </div>
+                            <div className='itemColoring'>
+                                <div className='nodeColor nodePerson'></div>
+                                <p style={{margin: '10px 0 10px 0'}}>Person</p>
+                            </div>
+                            <div className='itemColoring'>
+                                <div className='nodeColor nodePost'></div>
+                                <p style={{margin: '10px 0 10px 0'}}>Post</p>
+                            </div>
+                            <div className='itemColoring'>
+                                <div className='nodeColor nodeSelected'></div>
+                                <p style={{margin: '10px 0 10px 0'}}>Selected</p>
+                            </div>
+                            <div className='itemColoring'>
+                                <div className='nodeColor nodeNeighbouring'></div>
+                                <p style={{margin: '10px 0 10px 0'}}>Neighbouring</p>
+                            </div>
+                            <div className='itemTitle'>
+                                <InfoOutlinedIcon style={{margin: '10px 5px 0 5px'}}/>
+                                <p style={{margin: '10px 0 0 0'}}>About</p>
+                            </div>
+                            <div className='item'>
+                                <p className='aboutText'>Version 1.0</p>
                             </div>
                         </div>
-                    )
-                })}
-            </div>}
-            {selectedDescActive && selectedNode &&
-            <div className='nodeInfo'>
-                <div className='infoTitle'>
-                    {
-                        selectedNode.id.startsWith('at') ? selectedNode?.repostUri ? 'Repost' : 'Post' : 'Person'
-                    }
-                    <div className='exit' onClick={clearSelected}/>
+                    </div>
                 </div>
-                <Divider/>
-                {
-                    selectedNode.id.startsWith('did') ? 
-                        <div className='nodeInfoBody'> 
-                            <div className='nodeInfoList'>
-                                { selectedNode.info ? 
-                                    <div>
-                                        {
-                                            Object.entries(selectedNode.info).map(([key, value]) => {
-                                                return (
-                                                    <div key={key}>
-                                                        <div className='infoName'>{key}</div> 
-                                                        <div>{value}</div>
-                                                    </div>
-                                                )
-                                            })
-                                        }
-                                    </div> :
-                                    <div className='noInfo'>
-                                        No relevant information found.
-                                    </div>
-                                }
-                            </div>
-                            <Divider/>
-                            <Link 
-                                href={`https://bsky.app/profile/${selectedNode.id}`} 
-                                underline='hover'
-                                target='_blank'
-                                color='secondary'
-                                sx={{
-                                    alignSelf: 'center',
-                                    marginTop: '10px'
-                                }}
-                            >
-                                Visit profile
-                            </Link>
-                        </div> : 
-                    selectedNode.text ? 
-                        <div className='nodeInfoBody'> 
-                            <div className='nodeInfoList'>
-                                { selectedNode.info ? 
-                                    <div>
-                                        {
-                                            Object.entries(selectedNode.info).map(([key, value]) => {
-                                                return (
-                                                    <div key={key}>
-                                                        <div className='infoName'>{key}</div> 
-                                                        <div>{value}</div>
-                                                    </div>
-                                                )
-                                            })
-                                        }
-                                    </div> :
-                                    <div className='noInfo'>
-                                        No relevant information found.
-                                    </div>
-                                }
-                            </div>
-                            <Divider/>
-                            <Link 
-                                href={`https://bsky.app/profile/${selectedNode.id.split('//')[1].split('/')[0]}/post/${selectedNode.id.split('//')[1].split('/')[2]}`} 
-                                underline='hover'
-                                target='_blank'
-                                color='secondary'
-                                sx={{
-                                    alignSelf: 'center',
-                                    marginTop: '10px'
-                                }}
-                            >
-                                Visit post
-                            </Link>
-                        </div> :
-                    selectedNode.repostUri ? 
+                {subscribed && Object.keys(nodes).length === 0 && 
+                <div className='noNodesWarning'>
+                    Zero nodes found for subscribed user ID.
+                    Please wait a bit, enter a different ID or clear the current one.
+                </div>}
+                {selectedDescActive && selectedNode &&
+                <div className='nodeInfo'>
+                    <div className='infoTitle'>
+                        {
+                            selectedNode.id.startsWith('at') ? selectedNode?.repostUri ? 'Repost' : 'Post' : 'Person'
+                        }
+                        <CloseIcon 
+                            style={{
+                                cursor: 'pointer'
+                            }}
+                            onClick={clearSelected}/>
+                    </div>
+                    <Divider/>
+                    {
+                        selectedNode.id.startsWith('did') ? 
+                            <div className='nodeInfoBody'> 
+                                <div className='nodeInfoList'>
+                                    { selectedNode.info ? 
+                                        <div>
+                                            {
+                                                Object.entries(selectedNode.info).map(([key, value]) => {
+                                                    return (
+                                                        <div key={key}>
+                                                            <div className='infoName'>{key}</div> 
+                                                            <div>{value}</div>
+                                                        </div>
+                                                    )
+                                                })
+                                            }
+                                        </div> :
+                                        <div className='noInfo'>
+                                            No relevant information found.
+                                        </div>
+                                    }
+                                </div>
+                                <Divider/>
+                                <Link 
+                                    href={`https://bsky.app/profile/${selectedNode.id}`} 
+                                    underline='hover'
+                                    target='_blank'
+                                    sx={{
+                                        alignSelf: 'center',
+                                        marginTop: '10px',
+                                        color: '#0066FF'
+                                    }}
+                                >
+                                    Visit profile
+                                </Link>
+                            </div> : 
+                        selectedNode.text ? 
+                            <div className='nodeInfoBody'> 
+                                <div className='nodeInfoList'>
+                                    { selectedNode.info ? 
+                                        <div>
+                                            {
+                                                Object.entries(selectedNode.info).map(([key, value]) => {
+                                                    return (
+                                                        <div key={key}>
+                                                            <div className='infoName'>{key}</div> 
+                                                            <div>{value}</div>
+                                                        </div>
+                                                    )
+                                                })
+                                            }
+                                        </div> :
+                                        <div className='noInfo'>
+                                            No relevant information found.
+                                        </div>
+                                    }
+                                </div>
+                                <Divider/>
+                                <Link 
+                                    href={`https://bsky.app/profile/${selectedNode.id.split('//')[1].split('/')[0]}/post/${selectedNode.id.split('//')[1].split('/')[2]}`} 
+                                    underline='hover'
+                                    target='_blank'
+                                    sx={{
+                                        alignSelf: 'center',
+                                        marginTop: '10px',
+                                        color: '#0066FF'
+                                    }}
+                                >
+                                    Visit post
+                                </Link>
+                            </div> :
+                        selectedNode.repostUri ? 
+                            <div className='nodeInfoBody'> 
+                                <div className='nodeInfoList'>
+                                    { selectedNode.info ? 
+                                        <div>
+                                            {
+                                                Object.entries(selectedNode.info).map(([key, value]) => {
+                                                    return (
+                                                        <div key={key}>
+                                                            <div className='infoName'>{key}</div>
+                                                            <div>{value}</div>
+                                                        </div>
+                                                    )
+                                                })
+                                            }
+                                        </div> :
+                                        <div className='noInfo'>
+                                            No relevant information found.
+                                        </div>
+                                    }
+                                </div>
+                                <Divider/>
+                                <Link 
+                                    href={`https://bsky.app/profile/${selectedNode.repostUri.split('//')[1].split('/')[0]}/post/${selectedNode.repostUri.split('//')[1].split('/')[2]}`} 
+                                    underline='hover'
+                                    target='_blank'
+                                    sx={{
+                                        alignSelf: 'center',
+                                        marginTop: '10px',
+                                        color: '#0066FF'
+                                    }}
+                                >
+                                    Visit original post
+                                </Link>
+                            </div> :
                         <div className='nodeInfoBody'> 
                             <div className='nodeInfoList'>
                                 { selectedNode.info ? 
@@ -937,211 +1093,124 @@ function App({socket}) {
                             </div>
                             <Divider/>
                             <Link 
-                                href={`https://bsky.app/profile/${selectedNode.repostUri.split('//')[1].split('/')[0]}/post/${selectedNode.repostUri.split('//')[1].split('/')[2]}`} 
+                                href={`https://bsky.app/profile/${selectedNode.id.split('//')[1].split('/')[0]}/post/${selectedNode.id.split('//')[1].split('/')[2]}`} 
                                 underline='hover'
                                 target='_blank'
-                                color='secondary'
                                 sx={{
                                     alignSelf: 'center',
-                                    marginTop: '10px'
+                                    marginTop: '10px',
+                                    color: '#0066FF'
                                 }}
                             >
-                                Visit original post
+                                Visit post
                             </Link>
-                        </div> :
-                    <div className='nodeInfoBody'> 
-                        <div className='nodeInfoList'>
-                            { selectedNode.info ? 
-                                <div>
-                                    {
-                                        Object.entries(selectedNode.info).map(([key, value]) => {
-                                            return (
-                                                <div key={key}>
-                                                    <div className='infoName'>{key}</div>
-                                                    <div>{value}</div>
-                                                </div>
-                                            )
-                                        })
-                                    }
-                                </div> :
-                                <div className='noInfo'>
-                                    No relevant information found.
-                                </div>
-                            }
                         </div>
-                        <Divider/>
-                        <Link 
-                            href={`https://bsky.app/profile/${selectedNode.id.split('//')[1].split('/')[0]}/post/${selectedNode.id.split('//')[1].split('/')[2]}`} 
-                            underline='hover'
-                            target='_blank'
-                            color='secondary'
-                            sx={{
-                                alignSelf: 'center',
-                                marginTop: '10px'
-                            }}
-                        >
-                            Visit post
-                        </Link>
-                    </div>
-                }
-            </div>}
-            {is3D ?
-            <ForceGraph3D
-                graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
-
-                ref={ref3D}
-                backgroundColor='#71797E'
-                showNavInfo={false}
-
-                width={windowSize[0]}
-                height={windowSize[1]}
-
-                nodeLabel={node => nodeGroupNames[node.group]}
-                nodeRelSize={10}
-                nodeColor={node => {
-                    if (!coloring) {
-                        return '#FFFFFF';
                     }
-                    if (highlightNode === node || selectedNode === node) {
-                        return nodeColorScheme[3];
-                    }
-                    if (highlightNodes.has(node) || selectedNodes.has(node)) {
-                        return nodeColorScheme[4];
-                    }
-                    return nodeColorScheme[node.group];
-                }}
-                nodeOpacity={1}
+                </div>}
+                {is3D ?
+                <ForceGraph3D
+                    graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
-                linkLabel='value'
-                linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
-                linkCurvature={0.25}
-                linkColor={link => {
-                    if (!coloring) {
-                        return '#FFFFFF';
-                    }
-                    return linkColorScheme[link.value];
-                }}
+                    ref={ref3D}
+                    backgroundColor='#FFFFFF'
+                    showNavInfo={false}
 
-                linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
-                linkDirectionalArrowRelPos={0.5}
+                    width={windowSize[0]}
+                    height={windowSize[1]}
 
-                linkDirectionalParticles={link => highlightLinks.has(link) || selectedLinks.has(link) ? 1 : 0}
-                linkDirectionalParticleWidth={5}
-                linkDirectionalParticleSpeed={0.025}
+                    nodeLabel={node => nodeGroupNames[node.group]}
+                    nodeRelSize={10}
+                    nodeColor={node => {
+                        if (!coloring) {
+                            return '#474747';
+                        }
+                        if (highlightNode === node || selectedNode === node) {
+                            return nodeColorScheme[3];
+                        }
+                        if (highlightNodes.has(node) || selectedNodes.has(node)) {
+                            return nodeColorScheme[4];
+                        }
+                        return nodeColorScheme[node.group];
+                    }}
+                    nodeOpacity={1}
 
-                onNodeClick={animation ? handleClick : () => {}}
-                onNodeHover={animation ? handleNodeHover : () => {}}
-                onLinkHover={animation ? handleLinkHover : () => {}}
+                    linkLabel='value'
+                    linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
+                    linkCurvature={0.25}
+                    linkColor={link => {
+                        if (!coloring) {
+                            return '#474747';
+                        }
+                        return '#0066FF';
+                    }}
 
-                forceEngine='d3'
-                d3AlphaDecay={highlighted ? 1 : 0}
-                d3VelocityDecay={0.75}
-            /> : 
-            <ForceGraph2D
-                graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
+                    linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
+                    linkDirectionalArrowRelPos={0.5}
 
-                ref={ref2D}
-                backgroundColor='#71797E'
+                    linkDirectionalParticles={link => highlightLinks.has(link) || selectedLinks.has(link) ? 1 : 0}
+                    linkDirectionalParticleWidth={5}
+                    linkDirectionalParticleSpeed={0.025}
 
-                width={windowSize[0]}
-                height={windowSize[1]}
+                    onNodeClick={animation ? handleClick : () => {}}
+                    onNodeHover={animation ? handleNodeHover : () => {}}
+                    onLinkHover={animation ? handleLinkHover : () => {}}
 
-                nodeLabel={node => nodeGroupNames[node.group]}
-                nodeRelSize={10}
-                nodeColor={node => {
-                    if (!coloring) {
-                        return '#FFFFFF';
-                    }
-                    if (highlightNode === node || selectedNode === node) {
-                        return nodeColorScheme[3];
-                    }
-                    if (highlightNodes.has(node) || selectedNodes.has(node)) {
-                        return nodeColorScheme[4];
-                    }
-                    return nodeColorScheme[node.group];
-                }}
+                    forceEngine='d3'
+                    d3AlphaDecay={highlighted ? 1 : 0}
+                    d3VelocityDecay={0.75}
+                /> : 
+                <ForceGraph2D
+                    graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
-                linkLabel='value'
-                linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
-                linkCurvature={0.25}
-                linkColor={link => {
-                    if (!coloring) {
-                        return '#FFFFFF';
-                    }
-                    return linkColorScheme[link.value];
-                }}
+                    ref={ref2D}
+                    backgroundColor='#FFFFFF'
 
-                linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
-                linkDirectionalArrowRelPos={0.5}
+                    width={windowSize[0]}
+                    height={windowSize[1]}
 
-                linkDirectionalParticles={link => highlightLinks.has(link) || selectedLinks.has(link) ? 1 : 0}
-                linkDirectionalParticleWidth={5}
-                linkDirectionalParticleSpeed={0.025}
+                    nodeLabel={node => nodeGroupNames[node.group]}
+                    nodeRelSize={10}
+                    nodeColor={node => {
+                        if (!coloring) {
+                            return '#474747';
+                        }
+                        if (highlightNode === node || selectedNode === node) {
+                            return nodeColorScheme[3];
+                        }
+                        if (highlightNodes.has(node) || selectedNodes.has(node)) {
+                            return nodeColorScheme[4];
+                        }
+                        return nodeColorScheme[node.group];
+                    }}
 
-                onNodeClick={animation ? handleClick : () => {}}
-                onNodeHover={animation ? handleNodeHover : () => {}}
-                onLinkHover={animation ? handleLinkHover : () => {}}
+                    linkLabel='value'
+                    linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
+                    linkCurvature={0.25}
+                    linkColor={link => {
+                        if (!coloring) {
+                            return '#474747';
+                        }
+                        return '#0066FF';
+                    }}
 
-                d3AlphaDecay={highlighted ? 1 : 0}
-                d3VelocityDecay={0.75}
-            />}
-            <Accordion
-                sx={{
-                    position: 'absolute',
-                    bottom: '0px',
-                    left: '50%',
-                    transform: 'translate(-50%, 0%)',
-                    zIndex: '1',
+                    linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
+                    linkDirectionalArrowRelPos={0.5}
 
-                    padding: '10px',
-                    borderRadius: '10px 10px 0px 0px !important',
-                    backgroundColor: '#E0E0E0',
-                    fontSize: '17.5px',
+                    linkDirectionalParticles={link => highlightLinks.has(link) || selectedLinks.has(link) ? 1 : 0}
+                    linkDirectionalParticleWidth={5}
+                    linkDirectionalParticleSpeed={0.025}
 
-                    '&:before': {
-                        display: 'none'
-                    }
-                }}
-            >
-                <AccordionSummary expandIcon={<ExpandMoreIcon/>}>
-                    Performance options
-                </AccordionSummary>
-                <AccordionDetails
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        width: '750px'
-                    }} 
-                >
-                    <FormControl variant='outlined' sx={{ width: '150px'}}>
-                        <InputLabel color='warning'>Max node count</InputLabel>
-                        <Select
-                            value={maxNodes}
-                            onChange={(e) => handleMaxNodeChange(e.target.value)}
-                            color='warning'
-                            label='Max node count'
-                        >
-                            <MenuItem value={100}>100</MenuItem>
-                            <MenuItem value={250}>250</MenuItem>
-                            <MenuItem value={500}>500</MenuItem>
-                            <MenuItem value={1000}>1000</MenuItem>
-                            <MenuItem value={2500}>2500</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <FormGroup>
-                        <FormControlLabel control={<Checkbox color='warning' onChange={(e) => handleAnimationChanged(e.target.checked)}/>} label='Disable animations' labelPlacement='start'/>
-                    </FormGroup>
-                    <FormGroup>
-                        <FormControlLabel control={<Checkbox color='secondary' onChange={(e) => setColoring(!e.target.checked)}/>} label='Disable coloring' labelPlacement='start'/>
-                    </FormGroup>
-                    <FormGroup>
-                        <FormControlLabel control={<Checkbox color='warning' onChange={(e) => handle3DChanged(e.target.checked)}/>} label='Disable 3D view' labelPlacement='start'/>
-                    </FormGroup>
-                </AccordionDetails>
-            </Accordion>
+                    onNodeClick={animation ? handleClick : () => {}}
+                    onNodeHover={animation ? handleNodeHover : () => {}}
+                    onLinkHover={animation ? handleLinkHover : () => {}}
+
+                    d3AlphaDecay={highlighted ? 1 : 0}
+                    d3VelocityDecay={0.75}
+                />}
+            </div>
+            }
         </div>
+        </>
     );
 };
 
