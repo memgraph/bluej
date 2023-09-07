@@ -45,11 +45,11 @@ CREATE TRIGGER relationshipCreate ON --> CREATE AFTER COMMIT EXECUTE
 UNWIND createdEdges AS createdRelationship
 RETURN visualization.handle_relationship(createdRelationship, "merge");
 
-CREATE TRIGGER nodeDelete ON () DELETE AFTER COMMIT EXECUTE
+CREATE TRIGGER nodeDelete ON () DELETE BEFORE COMMIT EXECUTE
 UNWIND deletedVertices AS deletedNode
 RETURN visualization.delete_node(deletedNode);
 
-CREATE TRIGGER relationshipDelete ON --> DELETE AFTER COMMIT EXECUTE
+CREATE TRIGGER relationshipDelete ON --> DELETE BEFORE COMMIT EXECUTE
 UNWIND deletedEdges AS deletedRelationship
 RETURN visualization.handle_relationship(deletedRelationship, "detach");
 
