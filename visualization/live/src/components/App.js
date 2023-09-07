@@ -7,10 +7,12 @@ import { TextField, InputAdornment, Button, Divider, Link } from '@mui/material'
 import { Select, MenuItem, Checkbox } from '@mui/material';
 import { styled } from '@mui/system';
 import { ToastContainer, toast } from 'react-toastify';
+import { ChromePicker } from 'react-color';
 import 'react-toastify/dist/ReactToastify.css';
 
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
 import MenuIcon from '@mui/icons-material/Menu';
 import ModeEditIcon from '@mui/icons-material/ModeEdit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -67,6 +69,11 @@ function App() {
     
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [loadingScreen, setLoadingScreen] = useState(true);
+
+    const [customNodeColorScheme, setCustomNodeColorScheme] = useState({});
+    const [choosingForGroup, setChoosingForGroup] = useState(null);
+    const [pickerActive, setPickerActive] = useState(false);
+    const [pickerColor, setPickerColor] = useState('');
 
     const ref3D = useRef();
     const ref2D = useRef();
@@ -312,6 +319,19 @@ function App() {
 
         setIs3D(!disabled);
     }, [clearSelected, clearHighlight]);
+
+    const handleColorChanged = useCallback(() => {
+        if (choosingForGroup) {
+            setCustomNodeColorScheme(previous => {
+                return {
+                    ...previous,
+                    [choosingForGroup]: pickerColor
+                }
+            })
+        }
+
+        setPickerActive(false);
+    }, [choosingForGroup, pickerColor]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -792,7 +812,10 @@ function App() {
     const changeDrawerStatus = useCallback(e => {
         setDrawerOpen(!drawerOpen);
 
-    }, [drawerOpen])
+        if (drawerOpen && pickerActive) {
+            setPickerActive(false);
+        }
+    }, [drawerOpen, pickerActive])
     return (
         <>
         <div style={{width: "100%", height: "100%"}}>
@@ -923,22 +946,18 @@ function App() {
                                 <ModeEditIcon style={{margin: '10px 5px 0 5px'}}/>
                                 <p style={{margin: '10px 0 0 0'}}>Node coloring</p>
                             </div>
-                            <div className='itemColoring'>
-                                <div className='nodeColor nodePerson'></div>
-                                <p style={{margin: '10px 0 10px 0'}}>Person</p>
-                            </div>
-                            <div className='itemColoring'>
-                                <div className='nodeColor nodePost'></div>
-                                <p style={{margin: '10px 0 10px 0'}}>Post</p>
-                            </div>
-                            <div className='itemColoring'>
-                                <div className='nodeColor nodeSelected'></div>
-                                <p style={{margin: '10px 0 10px 0'}}>Selected</p>
-                            </div>
-                            <div className='itemColoring'>
-                                <div className='nodeColor nodeNeighbouring'></div>
-                                <p style={{margin: '10px 0 10px 0'}}>Neighbouring</p>
-                            </div>
+                            { Object.keys(nodeColorScheme).map((key) => {
+                                return (
+                                    <div key={key} className='itemColoring' onClick={() => {
+                                        setPickerActive(true);
+                                        setPickerColor(customNodeColorScheme[key] || nodeColorScheme[key]);
+                                        setChoosingForGroup(key);
+                                    }}>
+                                        <div className='nodeColor' style={{backgroundColor: customNodeColorScheme[key] || nodeColorScheme[key]}}/>
+                                        <p style={{margin: '10px 0 10px 0'}}>{nodeGroupNames[key]}</p>
+                                    </div>
+                                )
+                            })}
                             <div className='itemTitle'>
                                 <InfoOutlinedIcon style={{margin: '10px 5px 0 5px'}}/>
                                 <p style={{margin: '10px 0 0 0'}}>About</p>
@@ -949,6 +968,29 @@ function App() {
                         </div>
                     </div>
                 </div>
+                { pickerActive && 
+                <div className='colorPickerContainer'>
+                    <div className='iconsContainer'>
+                        <CloseIcon 
+                            style={{
+                                cursor: 'pointer'
+                            }}
+                            onClick={() => setPickerActive(false)}
+                        />
+                        <CheckIcon 
+                            style={{
+                                cursor: 'pointer'
+                            }}
+                            onClick={() => {
+                                handleColorChanged()
+                            }}
+                        />
+                    </div>
+                    <ChromePicker 
+                        color={pickerColor}
+                        onChange={(color) => setPickerColor(color.hex)}
+                    />
+                </div>}
                 {subscribed && Object.keys(nodes).length === 0 && 
                 <div className='noNodesWarning'>
                     Zero nodes found for subscribed user handle.
@@ -1127,19 +1169,19 @@ function App() {
                             return '#474747';
                         }
                         if (highlightNode === node || selectedNode === node) {
-                            return nodeColorScheme[3];
+                            return customNodeColorScheme[3] || nodeColorScheme[3];
                         }
                         if (highlightNodes.has(node) || selectedNodes.has(node)) {
-                            return nodeColorScheme[4];
+                            return customNodeColorScheme[4] || nodeColorScheme[4];
                         }
-                        return nodeColorScheme[node.group];
+                        return customNodeColorScheme[node.group] || nodeColorScheme[node.group];
                     }}
                     nodeOpacity={1}
 
                     linkLabel='value'
                     linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
                     linkCurvature={0.25}
-                    linkColor={link => {
+                    linkColor={() => {
                         if (!coloring) {
                             return '#474747';
                         }
@@ -1177,18 +1219,18 @@ function App() {
                             return '#474747';
                         }
                         if (highlightNode === node || selectedNode === node) {
-                            return nodeColorScheme[3];
+                            return customNodeColorScheme[3] || nodeColorScheme[3];
                         }
                         if (highlightNodes.has(node) || selectedNodes.has(node)) {
-                            return nodeColorScheme[4];
+                            return customNodeColorScheme[4] || nodeColorScheme[4];
                         }
-                        return nodeColorScheme[node.group];
+                        return customNodeColorScheme[node.group] || nodeColorScheme[node.group];
                     }}
 
                     linkLabel='value'
                     linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
                     linkCurvature={0.25}
-                    linkColor={link => {
+                    linkColor={() => {
                         if (!coloring) {
                             return '#474747';
                         }

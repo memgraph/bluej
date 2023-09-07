@@ -222,26 +222,19 @@
     border-radius: 50%;
     margin-left: 25px;
     margin-right: 10px;
-}
-
-.nodePerson {
-    background-color: #0066FF;
     box-shadow: -2px 2px 4px 0px rgba(0, 0, 0, 0.25) inset;
 }
 
-.nodePost {
-    background-color: #474747;
-    box-shadow: -2px 2px 4px 0px rgba(255, 255, 255, 0.25) inset;
+.colorPickerContainer {
+    position: absolute;
+    right: 350px;
+    top: 300px;
+    z-index: 2;
 }
 
-.nodeSelected {
-    background-color: #00C2FF;
-    box-shadow: -2px 2px 4px 0px rgba(0, 0, 0, 0.25) inset;
-}
-
-.nodeNeighbouring {
-    background-color: #A9A9A9;
-    box-shadow: -2px 2px 4px 0px rgba(0, 0, 0, 0.25) inset;
+.iconsContainer {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .aboutText {
