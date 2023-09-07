@@ -105,7 +105,9 @@ function App() {
     }
 
     useEffect(() => {
-        const s = io(process.env.REACT_APP_BACKEND);
+        const s = io(process.env.REACT_APP_BACKEND_DOMAIN, {
+            path: process.env.REACT_APP_BACKEND_PATH
+        });
         setSocket(s);
         setSocketInterval(setInterval(() => removeLoadingScreen(s), 500));
     }, []);
