@@ -87,7 +87,7 @@ function App() {
         1: 'Post',
         2: 'Person',
         3: 'Highlighted/Selected',
-        4: 'Neighbouring Node'
+        4: 'Neighbouring'
     }
 
     const nodeColorScheme = {
@@ -952,12 +952,15 @@ function App() {
                             </div>
                             { Object.keys(nodeColorScheme).map((key) => {
                                 return (
-                                    <div key={key} className='itemColoring' onClick={() => {
-                                        setPickerActive(true);
-                                        setPickerColor(customNodeColorScheme[key] || nodeColorScheme[key]);
-                                        setChoosingForGroup(key);
-                                    }}>
-                                        <div className='nodeColor' style={{backgroundColor: customNodeColorScheme[key] || nodeColorScheme[key]}}/>
+                                    <div key={key} className='itemColoring'>
+                                        <div className='nodeColor' 
+                                            style={{backgroundColor: customNodeColorScheme[key] || nodeColorScheme[key]}} 
+                                            onClick={() => {
+                                                setPickerActive(true);
+                                                setPickerColor(customNodeColorScheme[key] || nodeColorScheme[key]);
+                                                setChoosingForGroup(key);
+                                            }}
+                                        />
                                         <p style={{margin: '10px 0 10px 0'}}>{nodeGroupNames[key]}</p>
                                     </div>
                                 )
