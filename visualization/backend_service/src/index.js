@@ -53,7 +53,7 @@ io.on('connection', (socket) => {
     sockets[socket.id] = socket;
 
     socket.on('interest', async (clientInterest) => {
-        if (clientInterest && clientInterest.match(/^([a-zA-Z0-9\.-]+)$/)) {
+        if (clientInterest) {
             if (process.env.VERBOSE === 'true') {
                 console.log('Client is interested in handle: ' + clientInterest);
             }
@@ -65,76 +65,78 @@ io.on('connection', (socket) => {
                 const DIDs = [];
                 const results = [];
 
-                const interestPerson = await session.run(`MATCH (interested:Person {handle: "${clientInterest}"}) RETURN interested;`);
-                const initialRecord = interestPerson.records[0];
+                if (clientInterest.match(/^([a-zA-Z0-9\.-]+)$/)) {
+                    const interestPerson = await session.run(`MATCH (interested:Person {handle: "${clientInterest}"}) RETURN interested;`);
+                    const initialRecord = interestPerson.records[0];
 
-                if (initialRecord) {
-                    DIDs.push(initialRecord._fields[0].properties.did);
+                    if (initialRecord) {
+                        DIDs.push(initialRecord._fields[0].properties.did);
 
-                    // Initialize visualization array with filtered node
-                    results.push({
-                        type: initialRecord._fields[0].labels[0],
-                        ...initialRecord._fields[0].properties
-                    });
-
-                    // Find the most active direct friends, add some of them (nodeCount - 1) to visualization array
-                    const closeFollowers = await session.run(
-                        `MATCH (interested:Person {handle: "${clientInterest}"})-[follow:FOLLOW]->(follower:Person)
-                        WITH interested, follow, follower
-                        OPTIONAL MATCH (follower)-[]->(post:Post)
-                        RETURN interested, follow, follower, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
-                    );
-    
-                    if (closeFollowers?.records[0]?._fields[0]) {
-                        let cnt = 0;
-    
-                        closeFollowers.records.forEach(record => {
-                            DIDs.push(record._fields[2].properties.did);
-    
-                            if (cnt >= parseInt(process.env.NODE_COUNT)) {
-                                return;
-                            }
-    
-                            const node1 = {
-                                type: record._fields[0].labels[0],
-                                ...record._fields[0].properties
-                            };
-                            
-                            const node2 = {
-                                type: record._fields[2].labels[0],
-                                ...record._fields[2].properties
-                            };
-            
-                            let source = record._fields[0].properties.did;
-                            let target = record._fields[2].properties.did;
-            
-                            const relationship = {
-                                type: record._fields[1].type,
-                                source,
-                                target
-                            };
-            
-                            results.push({node1, relationship, node2});
-                            cnt++;
+                        // Initialize visualization array with filtered node
+                        results.push({
+                            type: initialRecord._fields[0].labels[0],
+                            ...initialRecord._fields[0].properties
                         });
+
+                        // Find the most active direct friends, add some of them (nodeCount - 1) to visualization array
+                        const closeFollowers = await session.run(
+                            `MATCH (interested:Person {handle: "${clientInterest}"})-[follow:FOLLOW]->(follower:Person)
+                            WITH interested, follow, follower
+                            OPTIONAL MATCH (follower)-[]->(post:Post)
+                            RETURN interested, follow, follower, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
+                        );
+        
+                        if (closeFollowers?.records[0]?._fields[0]) {
+                            let cnt = 0;
+        
+                            closeFollowers.records.forEach(record => {
+                                DIDs.push(record._fields[2].properties.did);
+        
+                                if (cnt >= parseInt(process.env.NODE_COUNT)) {
+                                    return;
+                                }
+        
+                                const node1 = {
+                                    type: record._fields[0].labels[0],
+                                    ...record._fields[0].properties
+                                };
+                                
+                                const node2 = {
+                                    type: record._fields[2].labels[0],
+                                    ...record._fields[2].properties
+                                };
+                
+                                let source = record._fields[0].properties.did;
+                                let target = record._fields[2].properties.did;
+                
+                                const relationship = {
+                                    type: record._fields[1].type,
+                                    source,
+                                    target
+                                };
+                
+                                results.push({node1, relationship, node2});
+                                cnt++;
+                            });
+                        }
+                        
+                        // Find friends of friends, add 1000 most active ones to the DID interest array
+                        const distantFollowers = await session.run(
+                            `MATCH (interested:Person {handle: "${clientInterest}"})-[:FOLLOW *2]->(follower:Person)
+                            WITH follower
+                            OPTIONAL MATCH (follower)-[]->(post:Post)
+                            RETURN follower.did AS did, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
+                        );
+        
+                        if (distantFollowers?.records[0]?._fields[0]) {
+                            distantFollowers.records.forEach(record => {
+                                DIDs.push(record._fields[0]);
+                            });
+                        }
                     }
-                    
-                    // Find friends of friends, add 1000 most active ones to the DID interest array
-                    const distantFollowers = await session.run(
-                        `MATCH (interested:Person {handle: "${clientInterest}"})-[:FOLLOW *2]->(follower:Person)
-                        WITH follower
-                        OPTIONAL MATCH (follower)-[]->(post:Post)
-                        RETURN follower.did AS did, count(post) AS number_of_posts ORDER BY number_of_posts DESC LIMIT 1000;`
-                    );
-    
-                    if (distantFollowers?.records[0]?._fields[0]) {
-                        distantFollowers.records.forEach(record => {
-                            DIDs.push(record._fields[0]);
-                        });
-                    }
+
+                    clientInterests[socket.id] = DIDs;
                 }
-
-                clientInterests[socket.id] = DIDs;
                 socket.emit(`initial ${clientInterest}`, results);
             } finally {
                 await session.close();
