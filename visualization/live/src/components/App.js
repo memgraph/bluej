@@ -7,7 +7,7 @@ import { TextField, InputAdornment, Button, Divider, Link } from '@mui/material'
 import { Select, MenuItem, Checkbox } from '@mui/material';
 import { styled } from '@mui/system';
 import { ToastContainer, toast } from 'react-toastify';
-import { ChromePicker } from 'react-color';
+import { TwitterPicker } from 'react-color';
 import 'react-toastify/dist/ReactToastify.css';
 
 import SearchIcon from '@mui/icons-material/Search';
@@ -78,6 +78,10 @@ function App() {
     const ref3D = useRef();
     const ref2D = useRef();
     const animationTime = 2000;
+    const colors = ['#474747', '#0066FF', '#00C2FF', '#A9A9A9',
+                    '#FF6900', '#FCB900', '#7BDCB5', '#00D084',
+                    '#EB144C', '#F78DA7', '#9900EF', '#9B3600',
+                    '#DEDEDE', '#000000']
 
     const nodeGroupNames = {
         1: 'Post',
@@ -970,24 +974,30 @@ function App() {
                 </div>
                 { pickerActive && 
                 <div className='colorPickerContainer'>
-                    <div className='iconsContainer'>
-                        <CloseIcon 
-                            style={{
-                                cursor: 'pointer'
-                            }}
-                            onClick={() => setPickerActive(false)}
-                        />
-                        <CheckIcon 
-                            style={{
-                                cursor: 'pointer'
-                            }}
-                            onClick={() => {
-                                handleColorChanged()
-                            }}
-                        />
+                    <div className='titleContainer'>
+                        <p className='colorPickerTitle'>{nodeGroupNames[choosingForGroup]}</p>
+                        <div className='iconsContainer'>
+                            <CloseIcon 
+                                style={{
+                                    cursor: 'pointer',
+                                    marginRight: '5px',
+                                }}
+                                onClick={() => setPickerActive(false)}
+                            />
+                            <CheckIcon 
+                                style={{
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => {
+                                    handleColorChanged()
+                                }}
+                            />
+                        </div>
                     </div>
-                    <ChromePicker 
+                    <TwitterPicker  
                         color={pickerColor}
+                        colors={colors}
+                        triangle='hide'
                         onChange={(color) => setPickerColor(color.hex)}
                     />
                 </div>}
