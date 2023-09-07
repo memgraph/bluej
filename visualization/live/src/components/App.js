@@ -71,6 +71,7 @@ function App() {
     const [loadingScreen, setLoadingScreen] = useState(true);
 
     const [customNodeColorScheme, setCustomNodeColorScheme] = useState({});
+    const [customRelationshipColorScheme, setCustomRelationshipColorScheme] = useState('');
     const [choosingForGroup, setChoosingForGroup] = useState(null);
     const [pickerActive, setPickerActive] = useState(false);
     const [pickerColor, setPickerColor] = useState('');
@@ -96,6 +97,10 @@ function App() {
         3: '#00C2FF',
         4: '#A9A9A9'
     };
+
+    const relationshipColorScheme = '#0066FF';
+    const disabledColoringColor = '#474747';
+    const backgroundColor = '#FFFFFF';
 
     useEffect(() => {
         const handleWindowResize = () => {
@@ -326,12 +331,16 @@ function App() {
 
     const handleColorChanged = useCallback(() => {
         if (choosingForGroup) {
-            setCustomNodeColorScheme(previous => {
-                return {
-                    ...previous,
-                    [choosingForGroup]: pickerColor
-                }
-            })
+            if (choosingForGroup !== 5) {
+                setCustomNodeColorScheme(previous => {
+                    return {
+                        ...previous,
+                        [choosingForGroup]: pickerColor
+                    }
+                })
+            } else {
+                setCustomRelationshipColorScheme(pickerColor)
+            }
         }
 
         setPickerActive(false);
@@ -948,7 +957,7 @@ function App() {
                             </div>
                             <div className='itemTitle'>
                                 <ModeEditIcon style={{margin: '10px 5px 0 5px'}}/>
-                                <p style={{margin: '10px 0 0 0'}}>Node coloring</p>
+                                <p style={{margin: '10px 0 0 0'}}>Coloring</p>
                             </div>
                             { Object.keys(nodeColorScheme).map((key) => {
                                 return (
@@ -965,6 +974,17 @@ function App() {
                                     </div>
                                 )
                             })}
+                            <div className='itemColoring'>
+                                <div className='nodeColor' 
+                                    style={{backgroundColor: customRelationshipColorScheme || relationshipColorScheme}} 
+                                    onClick={() => {
+                                        setPickerActive(true);
+                                        setPickerColor(customRelationshipColorScheme || relationshipColorScheme);
+                                        setChoosingForGroup(5);
+                                    }}
+                                />
+                                <p style={{margin: '10px 0 10px 0'}}>Relationship</p>
+                            </div>
                             <div className='itemTitle'>
                                 <InfoOutlinedIcon style={{margin: '10px 5px 0 5px'}}/>
                                 <p style={{margin: '10px 0 0 0'}}>About</p>
@@ -1169,7 +1189,7 @@ function App() {
                     graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
                     ref={ref3D}
-                    backgroundColor='#FFFFFF'
+                    backgroundColor={backgroundColor}
                     showNavInfo={false}
 
                     width={windowSize[0]}
@@ -1179,7 +1199,7 @@ function App() {
                     nodeRelSize={10}
                     nodeColor={node => {
                         if (!coloring) {
-                            return '#474747';
+                            return disabledColoringColor;
                         }
                         if (highlightNode === node || selectedNode === node) {
                             return customNodeColorScheme[3] || nodeColorScheme[3];
@@ -1196,9 +1216,9 @@ function App() {
                     linkCurvature={0.25}
                     linkColor={() => {
                         if (!coloring) {
-                            return '#474747';
+                            return disabledColoringColor;
                         }
-                        return '#0066FF';
+                        return customRelationshipColorScheme || relationshipColorScheme;
                     }}
 
                     linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
@@ -1220,7 +1240,7 @@ function App() {
                     graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
                     ref={ref2D}
-                    backgroundColor='#FFFFFF'
+                    backgroundColor={backgroundColor}
 
                     width={windowSize[0]}
                     height={windowSize[1]}
@@ -1229,7 +1249,7 @@ function App() {
                     nodeRelSize={10}
                     nodeColor={node => {
                         if (!coloring) {
-                            return '#474747';
+                            return disabledColoringColor;
                         }
                         if (highlightNode === node || selectedNode === node) {
                             return customNodeColorScheme[3] || nodeColorScheme[3];
@@ -1245,9 +1265,9 @@ function App() {
                     linkCurvature={0.25}
                     linkColor={() => {
                         if (!coloring) {
-                            return '#474747';
+                            return disabledColoringColor;
                         }
-                        return '#0066FF';
+                        return customRelationshipColorScheme || relationshipColorScheme;
                     }}
 
                     linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
