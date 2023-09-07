@@ -12,10 +12,12 @@ const agent = new BskyAgent({
 
 const graphNS = new RepoNS(agent.api);
 
-const verbose = false;
+const verbose = true;
 
 let errorList: any[] = [];
 let iterationTimes: any[] = [];
+let skipUser: any[] = [];
+let numberOfSkipUser: number = 0;
 
 async function updateRelationships(type: string){
     let firstCalled = Date.now();
@@ -36,6 +38,7 @@ async function updateRelationships(type: string){
                 console.log("Number of updated users: " + numberOfUpdated);
                 console.log("Number of calls: " + numberOfCalls);
                 console.log("Waiting time: " + waitingTime);
+                console.log("Skiped users: " + skipUser);
             }
             iterationTimes.push([(endIteration.valueOf() - startIteration.valueOf()), update.get("numberOfCalls")])
             waitingTime = calculateWaitingTime(numberOfCalls, (endIteration - firstCalled.valueOf()));
@@ -85,7 +88,13 @@ async function updateRelationship(type: string, numberOfUpdated: number, numberO
 
     try {
         const session = driver.session();
-        let list = await session.run(query + "WHERE r.uri IS NULL RETURN p1, r, p2 LIMIT 1");
+        let callQuery = query;
+        const parameters = {
+            skip: numberOfSkipUser
+        }
+        if(numberOfSkipUser > 0) callQuery = callQuery + `WHERE r.uri IS NULL RETURN p1, r, p2 SKIP ${parameters.skip} LIMIT 1`
+        else callQuery = callQuery + `WHERE r.uri IS NULL RETURN p1, r, p2 LIMIT 1`
+        let list = await session.run(callQuery, parameters);
         Array.prototype.push.apply(relationship, list.records);
         session.close()
     } catch (err) {
@@ -129,7 +138,7 @@ async function updateRelationship(type: string, numberOfUpdated: number, numberO
             session.close()
         } catch (err) {
             errorList.push(["gettingRelationshipUser", err]);
-            console.error('[gettingRelationshipUser]:', err);
+            if(verbose) console.error('[gettingRelationshipUser]:', err);
             state = false;
         }
     }
@@ -190,6 +199,7 @@ async function deleteUnreachable(type: string, relationshipList: any[], actorDid
     }
 
     for(let subjectDid of relationshipList){
+        if(verbose) console.log("Actor Did: " + actorDid);
         if(verbose) console.log("Deleting: " + subjectDid);
         try {
             const session = driver.session();
@@ -209,25 +219,11 @@ async function deleteUnreachable(type: string, relationshipList: any[], actorDid
 
     return state;
 }
-async function deleteUnexistingUser(type: string, actorDid: string){
-    let cypher = `MATCH (p1:Person {did: $did1}) DELETE p1 `;
-    let state = false;
-
-    if(verbose) console.log("Deleting User: " + actorDid);
-    try {
-        const session = driver.session();
-        const parameters = {
-            did1: actorDid,
-        };
-
-        const result = await session.run(cypher, parameters);
-        session.close();
-        state = true;
-    } catch (err) {
-        errorList.push(["saveToDb", err, actorDid]);
-        console.error('[saveToDb]:', err);
+async function skipUnexistingUser(type: string, actorDid: string){
+    if(!skipUser.includes(actorDid)){
+        skipUser.push(actorDid);
     }
-    return state;
+    numberOfSkipUser += 1;
 }
 
 async function updateOneUser(type: string, actorDid: string, relationshipList: any[]){
@@ -283,7 +279,7 @@ async function updateOneUser(type: string, actorDid: string, relationshipList: a
         }
         if(numberOfErrors >= 5){
             state = false;
-            await deleteUnexistingUser(type, actorDid);
+            await skipUnexistingUser(type, actorDid);
             return {error: 1, numberOfCalls: numberOfCalls, numberOfUpdated: numberOfUpdated};;
         }
 
@@ -334,6 +330,8 @@ async function run(){
     console.log("Updating follow relationships...");
 
     let remaining = 0;
+    skipUser = [];
+    numberOfSkipUser = 0;
     while(remaining == 0){
         let ret = await updateRelationships("FOLLOW");
         if(ret != undefined && ret != null){
@@ -346,6 +344,8 @@ async function run(){
         await delay(5000);
     }
     remaining = 0;
+    skipUser = [];
+    numberOfSkipUser = 0;
     console.log("Updating like relationships...");
     while(remaining == 0){
         let ret = await updateRelationships("LIKE");
