@@ -951,8 +951,8 @@ function App() {
                 </div>
                 {subscribed && Object.keys(nodes).length === 0 && 
                 <div className='noNodesWarning'>
-                    Zero nodes found for subscribed user ID.
-                    Please wait a bit, enter a different ID or clear the current one.
+                    Zero nodes found for subscribed user handle.
+                    Please wait a bit, enter a different handle or clear the current one.
                 </div>}
                 {selectedDescActive && selectedNode &&
                 <div className='nodeInfo'>
