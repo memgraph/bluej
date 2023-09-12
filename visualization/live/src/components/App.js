@@ -7,10 +7,12 @@ import { TextField, InputAdornment, Button, Divider, Link } from '@mui/material'
 import { Select, MenuItem, Checkbox } from '@mui/material';
 import { styled } from '@mui/system';
 import { ToastContainer, toast } from 'react-toastify';
+import { TwitterPicker } from 'react-color';
 import 'react-toastify/dist/ReactToastify.css';
 
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
 import MenuIcon from '@mui/icons-material/Menu';
 import ModeEditIcon from '@mui/icons-material/ModeEdit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -68,15 +70,25 @@ function App() {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [loadingScreen, setLoadingScreen] = useState(true);
 
+    const [customNodeColorScheme, setCustomNodeColorScheme] = useState({});
+    const [customRelationshipColorScheme, setCustomRelationshipColorScheme] = useState('');
+    const [choosingForGroup, setChoosingForGroup] = useState(null);
+    const [pickerActive, setPickerActive] = useState(false);
+    const [pickerColor, setPickerColor] = useState('');
+
     const ref3D = useRef();
     const ref2D = useRef();
     const animationTime = 2000;
+    const colors = ['#474747', '#0066FF', '#00C2FF', '#A9A9A9',
+                    '#FF6900', '#FCB900', '#7BDCB5', '#00D084',
+                    '#EB144C', '#F78DA7', '#9900EF', '#9B3600',
+                    '#DEDEDE', '#000000']
 
     const nodeGroupNames = {
         1: 'Post',
         2: 'Person',
         3: 'Highlighted/Selected',
-        4: 'Neighbouring Node'
+        4: 'Neighbouring'
     }
 
     const nodeColorScheme = {
@@ -85,6 +97,10 @@ function App() {
         3: '#00C2FF',
         4: '#A9A9A9'
     };
+
+    const relationshipColorScheme = '#0066FF';
+    const disabledColoringColor = '#474747';
+    const backgroundColor = '#FFFFFF';
 
     useEffect(() => {
         const handleWindowResize = () => {
@@ -312,6 +328,23 @@ function App() {
 
         setIs3D(!disabled);
     }, [clearSelected, clearHighlight]);
+
+    const handleColorChanged = useCallback(() => {
+        if (choosingForGroup) {
+            if (choosingForGroup !== 5) {
+                setCustomNodeColorScheme(previous => {
+                    return {
+                        ...previous,
+                        [choosingForGroup]: pickerColor
+                    }
+                })
+            } else {
+                setCustomRelationshipColorScheme(pickerColor)
+            }
+        }
+
+        setPickerActive(false);
+    }, [choosingForGroup, pickerColor]);
 
     useEffect(() => {
         const onDelete = msg => {
@@ -792,7 +825,10 @@ function App() {
     const changeDrawerStatus = useCallback(e => {
         setDrawerOpen(!drawerOpen);
 
-    }, [drawerOpen])
+        if (drawerOpen && pickerActive) {
+            setPickerActive(false);
+        }
+    }, [drawerOpen, pickerActive])
     return (
         <>
         <div style={{width: "100%", height: "100%"}}>
@@ -921,23 +957,33 @@ function App() {
                             </div>
                             <div className='itemTitle'>
                                 <ModeEditIcon style={{margin: '10px 5px 0 5px'}}/>
-                                <p style={{margin: '10px 0 0 0'}}>Node coloring</p>
+                                <p style={{margin: '10px 0 0 0'}}>Coloring</p>
                             </div>
+                            { Object.keys(nodeColorScheme).map((key) => {
+                                return (
+                                    <div key={key} className='itemColoring'>
+                                        <div className='nodeColor' 
+                                            style={{backgroundColor: customNodeColorScheme[key] || nodeColorScheme[key]}} 
+                                            onClick={() => {
+                                                setPickerActive(true);
+                                                setPickerColor(customNodeColorScheme[key] || nodeColorScheme[key]);
+                                                setChoosingForGroup(key);
+                                            }}
+                                        />
+                                        <p style={{margin: '10px 0 10px 0'}}>{nodeGroupNames[key]}</p>
+                                    </div>
+                                )
+                            })}
                             <div className='itemColoring'>
-                                <div className='nodeColor nodePerson'></div>
-                                <p style={{margin: '10px 0 10px 0'}}>Person</p>
-                            </div>
-                            <div className='itemColoring'>
-                                <div className='nodeColor nodePost'></div>
-                                <p style={{margin: '10px 0 10px 0'}}>Post</p>
-                            </div>
-                            <div className='itemColoring'>
-                                <div className='nodeColor nodeSelected'></div>
-                                <p style={{margin: '10px 0 10px 0'}}>Selected</p>
-                            </div>
-                            <div className='itemColoring'>
-                                <div className='nodeColor nodeNeighbouring'></div>
-                                <p style={{margin: '10px 0 10px 0'}}>Neighbouring</p>
+                                <div className='nodeColor' 
+                                    style={{backgroundColor: customRelationshipColorScheme || relationshipColorScheme}} 
+                                    onClick={() => {
+                                        setPickerActive(true);
+                                        setPickerColor(customRelationshipColorScheme || relationshipColorScheme);
+                                        setChoosingForGroup(5);
+                                    }}
+                                />
+                                <p style={{margin: '10px 0 10px 0'}}>Relationship</p>
                             </div>
                             <div className='itemTitle'>
                                 <InfoOutlinedIcon style={{margin: '10px 5px 0 5px'}}/>
@@ -949,6 +995,35 @@ function App() {
                         </div>
                     </div>
                 </div>
+                { pickerActive && 
+                <div className='colorPickerContainer'>
+                    <div className='titleContainer'>
+                        <p className='colorPickerTitle'>{nodeGroupNames[choosingForGroup]}</p>
+                        <div className='iconsContainer'>
+                            <CloseIcon 
+                                style={{
+                                    cursor: 'pointer',
+                                    marginRight: '5px',
+                                }}
+                                onClick={() => setPickerActive(false)}
+                            />
+                            <CheckIcon 
+                                style={{
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => {
+                                    handleColorChanged()
+                                }}
+                            />
+                        </div>
+                    </div>
+                    <TwitterPicker  
+                        color={pickerColor}
+                        colors={colors}
+                        triangle='hide'
+                        onChange={(color) => setPickerColor(color.hex)}
+                    />
+                </div>}
                 {subscribed && Object.keys(nodes).length === 0 && 
                 <div className='noNodesWarning'>
                     Zero nodes found for subscribed user handle.
@@ -1114,7 +1189,7 @@ function App() {
                     graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
                     ref={ref3D}
-                    backgroundColor='#FFFFFF'
+                    backgroundColor={backgroundColor}
                     showNavInfo={false}
 
                     width={windowSize[0]}
@@ -1124,26 +1199,26 @@ function App() {
                     nodeRelSize={10}
                     nodeColor={node => {
                         if (!coloring) {
-                            return '#474747';
+                            return disabledColoringColor;
                         }
                         if (highlightNode === node || selectedNode === node) {
-                            return nodeColorScheme[3];
+                            return customNodeColorScheme[3] || nodeColorScheme[3];
                         }
                         if (highlightNodes.has(node) || selectedNodes.has(node)) {
-                            return nodeColorScheme[4];
+                            return customNodeColorScheme[4] || nodeColorScheme[4];
                         }
-                        return nodeColorScheme[node.group];
+                        return customNodeColorScheme[node.group] || nodeColorScheme[node.group];
                     }}
                     nodeOpacity={1}
 
                     linkLabel='value'
                     linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
                     linkCurvature={0.25}
-                    linkColor={link => {
+                    linkColor={() => {
                         if (!coloring) {
-                            return '#474747';
+                            return disabledColoringColor;
                         }
-                        return '#0066FF';
+                        return customRelationshipColorScheme || relationshipColorScheme;
                     }}
 
                     linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}
@@ -1165,7 +1240,7 @@ function App() {
                     graphData={{nodes: Object.values(nodes), links: Object.values(links)}}
 
                     ref={ref2D}
-                    backgroundColor='#FFFFFF'
+                    backgroundColor={backgroundColor}
 
                     width={windowSize[0]}
                     height={windowSize[1]}
@@ -1174,25 +1249,25 @@ function App() {
                     nodeRelSize={10}
                     nodeColor={node => {
                         if (!coloring) {
-                            return '#474747';
+                            return disabledColoringColor;
                         }
                         if (highlightNode === node || selectedNode === node) {
-                            return nodeColorScheme[3];
+                            return customNodeColorScheme[3] || nodeColorScheme[3];
                         }
                         if (highlightNodes.has(node) || selectedNodes.has(node)) {
-                            return nodeColorScheme[4];
+                            return customNodeColorScheme[4] || nodeColorScheme[4];
                         }
-                        return nodeColorScheme[node.group];
+                        return customNodeColorScheme[node.group] || nodeColorScheme[node.group];
                     }}
 
                     linkLabel='value'
                     linkWidth={link => highlightLinks.has(link) || selectedLinks.has(link) ? 5 : 1}
                     linkCurvature={0.25}
-                    linkColor={link => {
+                    linkColor={() => {
                         if (!coloring) {
-                            return '#474747';
+                            return disabledColoringColor;
                         }
-                        return '#0066FF';
+                        return customRelationshipColorScheme || relationshipColorScheme;
                     }}
 
                     linkDirectionalArrowLength={link => highlightLinks.has(link) || selectedLinks.has(link) ? 7.5 : 2.5}

@@ -12,7 +12,7 @@ const char *argumentDid = "did";
 const std::string base_url = "http://host.docker.internal:3002";
 
 void create_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -66,7 +66,7 @@ void create_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mg
 }
 
 void handle_relationship(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -154,7 +154,7 @@ void handle_relationship(mgp_list *args, mgp_func_context *ctx, mgp_func_result 
 }
 
 void delete_node(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -244,7 +244,7 @@ void execute_enrich_person(std::string did) {
 }
 
 void enrich_person(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, mgp_memory *memory) {
-  mgp::memory = memory;
+  mgp::MemoryDispatcherGuard guard(memory);
   const auto arguments = mgp::List(args);
   auto result = mgp::Result(res);
 
@@ -263,7 +263,7 @@ void enrich_person(mgp_list *args, mgp_func_context *ctx, mgp_func_result *res, 
 
 extern "C" int mgp_init_module(struct mgp_module *module, struct mgp_memory *memory) {
   try {
-    mgp::memory = memory;
+    mgp::MemoryDispatcherGuard guard(memory);
 
     mgp::AddFunction(create_node, "create_node", {
       mgp::Parameter(argumentNode, mgp::Type::Node)
