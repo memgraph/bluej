@@ -1,3 +1,8 @@
+### Query module
+
+To run the visualization locally, you have to have the custom visualization query module loaded to Memgraph. To compile it, you can consult the README.md file in the query_module folder. 
+Note: if you plan to run Memgraph on host (so not in a Docker container), you will have to change the hostname (line 12 in visualization.cpp) to 'http://localhost:3002'.
+
 ### Triggers
 
 In order for the visualization to work, Memgraph needs to have certain triggers stored. You can create the necessary triggers using the following queries (each probably needs to be done separately):
