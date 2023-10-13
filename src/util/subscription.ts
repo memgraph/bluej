@@ -46,7 +46,7 @@ export abstract class FirehoseSubscriptionBase {
         }
         // update stored cursor every 20 events or so
         if (isCommit(evt) && evt.seq % 20 === 0) {
-          await this.upsertCursor(evt.seq)
+          await this.updateCursor(evt.seq)
         }
       }
     } catch (err) {
@@ -63,24 +63,10 @@ export abstract class FirehoseSubscriptionBase {
       .execute()
   }
 
-  async upsertCursor(cursor: number = 0, service: string = this.service) {
-    const state = await this.db
-      .selectFrom('sub_state')
-      .select(['service', 'cursor'])
-      .where('service', '=', service)
-      .executeTakeFirst()
-
-    if (state) {
-      await this.db.updateTable('sub_state').set({ cursor }).where('service', '=', service).execute()
-    } else {
-      await this.db.insertInto('sub_state').values({ cursor, service }).execute()
-    }
-  }
-
   async getCursor(): Promise<{ cursor?: number }> {
     const res = await this.db
       .selectFrom('sub_state')
-      .select('cursor')
+      .selectAll()
       .where('service', '=', this.service)
       .executeTakeFirst()
     return res ? { cursor: res.cursor } : {}
