@@ -7,9 +7,9 @@ It's the first fully algorithmic feed that offers a twitter home like experience
 
 ## Instructions
 
-To run BlueJ, run the memgraph database by
+To run BlueJ, run the Memgraph database with:
 ```
-docker run -it -p 7687:7687 -p 7444:7444 -p 3000:3000 memgraph/memgraph-platform
+docker run -it -p 7687:7687 -p 7444:7444 memgraph/memgraph-mage
 ```
 
 Or follow the instructions for your platform on https://memgraph.com/docs/memgraph/installation
