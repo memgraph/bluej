@@ -1,8 +1,11 @@
 # Welcome to Home+
 
-It's the Home feed Blue Sky was missing until now: A feed that shows those you care about, and adds interesting content from your extended social circles
+It's the Home feed Bluesky was missing until now: A feed that shows those you care about, and adds interesting content from your extended social circles
 
 It's the first fully algorithmic feed that offers a twitter home like experience, but without the engagement hacking
+
+> [!NOTE]  
+> BlueJ is no longer maintained, but you can use this project as a template to create your custom feed for Bluesky.
 
 
 ## Instructions
